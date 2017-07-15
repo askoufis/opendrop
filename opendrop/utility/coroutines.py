@@ -29,16 +29,17 @@ class coroutine(object):
             try:
                 yield_value = self.gen.send(send_value)
 
-                if yield_value == EXIT:
-                    raise StopIteration
-                elif isinstance(yield_value, tuple) and len(yield_value) and yield_value[0] == EXIT:
-                    send_value = yield_value[1:]
+                if yield_value == EXIT or \
+                   isinstance(yield_value, tuple) and len(yield_value) and yield_value[0] == EXIT:
+                    if isinstance(yield_value, tuple):
+                        send_value = yield_value[1:]
 
-                    if len(send_value) == 1:
-                        send_value = send_value[0]
-                    elif len(send_value) == 0:
-                        send_value = None
+                        if len(send_value) == 1:
+                            send_value = send_value[0]
+                        elif len(send_value) == 0:
+                            send_value = None
 
+                    self.gen.close()
                     raise StopIteration
                 elif isinstance(yield_value, Event):
                     def cb(*args, **kwargs):
@@ -65,7 +66,7 @@ def co(function):
         def wrapper(*args, **kwargs):
             reply = PersistentEvent()
             gen = function(*args, **kwargs)
-
+            
             coroutine(gen, reply).step()
 
             return reply
