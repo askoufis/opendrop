@@ -11,4 +11,5 @@ widgets = [
     "IntegerEntry",
     "Value",
     "RegionSelector",
+    "Scale",
 ]
