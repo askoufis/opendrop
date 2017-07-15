@@ -1,6 +1,10 @@
 # Opendrop user preferences
 opendrop_parameters.json
 
+# Misc
+.DS_Store
+.idea
+
 # .gitignore for Python copied from github/gitignore
 
 # Byte-compiled / optimized / DLL files
