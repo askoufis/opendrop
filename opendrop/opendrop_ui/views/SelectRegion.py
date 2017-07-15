@@ -6,7 +6,7 @@ from opendrop.opendrop_ui.views.utility.scale_from_bounds import scale_from_boun
 
 from opendrop.resources import resources
 
-from opendrop.shims import tkinter_ as tk
+from opendrop.shims import tkinter as tk
 
 import opendrop.utility.coroutines as coroutines
 import opendrop.utility.source_loader as source_loader
@@ -62,21 +62,18 @@ class SelectRegion(View):
                 self.selector.configure(image=image_tk)
 
 
-    def body(self, image_source_desc, image_source_type):
+    def body(self, image_source): #image_source_desc, image_source_type):
         root = self.root
 
         with self.busy:
+            self.image_source = image_source
+
             image_source_fps = None
 
-            if image_source_type == ImageSourceOption.LOCAL_IMAGES:
-                # If just images, then cycle through them at a framerate of 2fps
-                self.image_source = source_loader.load(image_source_desc, image_source_type)
+            if isinstance(image_source, source_loader.LocalImages):
                 image_source_fps = 2
-            elif image_source_type == ImageSourceOption.USB_CAMERA:
-                self.image_source = source_loader.load(image_source_desc, image_source_type)
+            elif isinstance(image_source, source_loader.USBCameraSource):
                 image_source_fps = None # None specifies as fast as possible
-            elif image_source_type == ImageSourceOption.FLEA3:
-                raise NotImplementedError("Flea3 not supported yet")
 
             screen_res = self.view_manager.screen_resolution
             image_source_size = self.image_source.size
@@ -113,8 +110,8 @@ class SelectRegion(View):
             loop=True
         ).bind(self.update_image)
 
-    def _clear(self):
-        self.image_source.release()
+    # def _clear(self):
+    #     self.image_source.release()
 
     def refresh(self):
         self.selector.value = BBox2()

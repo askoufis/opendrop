@@ -10,6 +10,7 @@ from opendrop.resources import resources
 from opendrop.constants import OperationMode
 
 from opendrop.utility import coroutines
+from opendrop.utility import source_loader
 
 from opendrop.utility.vectors import Vector2, BBox2
 # DEBUG
@@ -63,15 +64,14 @@ def parse_preferences(pref):
     return form_data
 
 @coroutines.co
-def select_regions(context, num_regions, image_source_desc, image_source_type):
+def select_regions(context, num_regions, image_source):
     view_manager = context["view_manager"]
 
     regions = []
 
     for i in range(num_regions):
         view = yield view_manager.set_view(views.SelectRegion,
-            image_source_desc=image_source_desc,
-            image_source_type=image_source_type
+            image_source=image_source,
         )
 
         response = yield view.events.submit
@@ -86,12 +86,11 @@ def select_regions(context, num_regions, image_source_desc, image_source_type):
     yield regions
 
 @coroutines.co
-def select_threshold(context, image_source_desc, image_source_type):
+def select_threshold(context, image_source):
     view_manager = context["view_manager"]
 
     view = yield view_manager.set_view(views.SelectThreshold,
-         image_source_desc=image_source_desc,
-         image_source_type=image_source_type
+        image_source=image_source
     )
 
     threshold_val = yield view.events.submit
@@ -142,30 +141,30 @@ def user_input(context):
     save_preferences(pref)
 
     image_source_desc = response_form["image_acquisition"]["image_source"]
-    print(image_source_desc)
     image_source_type = response_form["image_acquisition"]["image_source_type"]
 
-    threshold_val = yield select_threshold(context, image_source_desc=image_source_desc,
-                                           image_source_type=image_source_type)
+    err = 0
 
-    if threshold_val is None:
+    with source_loader.load(image_source_desc, image_source_type) as image_source:
+        threshold_val = yield select_threshold(context, image_source=image_source)
+
+        if threshold_val is None:
+            err = 1
+        else:
+            num_regions = OPENDROP_OP_REQUIREMENTS[context["operation_mode"]]["regions"]
+
+            regions = yield select_regions(context,
+                num_regions,
+                image_source=image_source,
+            )
+
+            if regions is None:
+                err = 1
+
+    if err:
         yield user_input(context)
         yield coroutines.EXIT
-
-    num_regions = OPENDROP_OP_REQUIREMENTS[context["operation_mode"]]["regions"]
-
-    regions = yield select_regions(context,
-        num_regions,
-        image_source_desc=image_source_desc,
-        image_source_type=image_source_type
-    )
-
-    if regions is None:
-        yield user_input(context)
-        yield coroutines.EXIT
-
 # End of UI
-
 
 def main():
     view_manager = view_hook(ViewManager(default_title="Opendrop {}".format(VERSION)))
