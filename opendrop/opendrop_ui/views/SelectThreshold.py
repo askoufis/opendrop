@@ -57,7 +57,7 @@ class SelectThreshold(View):
         self.set_image_source(image_source_desc, image_source_type)
 
         cv_image = cv2.imread(self.image_source.filenames[0], cv2.IMREAD_GRAYSCALE)
-        self.cv_image_resized = cv2.resize(cv_image, (self.resize_to.x, self.resize_to.y), cv2.INTER_LINEAR)
+        self.cv_image_resized = cv2.resize(cv_image, (self.resize_to.x, self.resize_to.y), interpolation = cv2.INTER_LINEAR)
 
         self.image_frame = tk.Frame(root, width=self.resize_to[0], height=self.resize_to[1])
         self.image_frame.grid(row=0, column=0)
