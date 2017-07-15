@@ -16,4 +16,4 @@ class LabelFrame(FormWidget, tk.LabelFrame):
         options = ExtKwargs(options).alias({"background":"bg"}) \
                                     .extract("width", "height", "padx", "pady", "background",
                                              "text", "font")
-        return tk.Frame.configure(self, **options)
+        return tk.LabelFrame.configure(self, **options)
