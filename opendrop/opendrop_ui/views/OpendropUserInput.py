@@ -168,13 +168,13 @@ class OpendropUserInput(View):
             name = "needle_diameter"
         ).grid(row = 2, column = 1, sticky = "we")
 
-        #-------- Threshold value FloatEntry
-
-        widgets.Label(physical_frame, text = "Threshold value:") \
-            .grid(row = 3, column = 0, sticky = "w")
-        widgets.forms.FloatEntry(physical_frame,
-            name = "threshold_val"
-        ).grid(row = 3, column = 1, sticky = "we")
+        # #-------- Threshold value FloatEntry
+        #
+        # widgets.Label(physical_frame, text = "Threshold value:") \
+        #     .grid(row = 3, column = 0, sticky = "w")
+        # widgets.forms.FloatEntry(physical_frame,
+        #     name = "threshold_val"
+        # ).grid(row = 3, column = 1, sticky = "we")
 
         # Plotting checklist
 
