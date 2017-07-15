@@ -21,16 +21,16 @@ from opendrop.opendrop_ui import views
 
 OPENDROP_OP_REQUIREMENTS = {
     OperationMode.PENDANT: {
-        "regions": 1,
+        "regions": 2,
     },
     OperationMode.SESSILE: {
-        "regions": 1,
+        "regions": 2,
     },
     OperationMode.CONAN: {
-        "regions": 2,
+        "regions": 1,
     },
     OperationMode.CONAN_NEEDLE: {
-        "regions": 2,
+        "regions": 1,
     },
 }
 
@@ -89,17 +89,14 @@ def select_regions(context, num_regions, image_source_desc, image_source_type):
 def select_threshold(context, image_source_desc, image_source_type):
     view_manager = context["view_manager"]
 
-    # view = yield view_manager.set_view(views.SelectThreshold,
-    #     image_source_desc=image_source_desc,
-    #     image_source_type=image_source_type
-    # )
-    #
-    # threshold_val = yield view.events.submit
-    #
-    # yield threshold_val
+    view = yield view_manager.set_view(views.SelectThreshold,
+         image_source_desc=image_source_desc,
+         image_source_type=image_source_type
+    )
 
-    yield 40
+    threshold_val = yield view.events.submit
 
+    yield threshold_val
 
 # Main UI flow
 
@@ -145,6 +142,7 @@ def user_input(context):
     save_preferences(pref)
 
     image_source_desc = response_form["image_acquisition"]["image_source"]
+    print(image_source_desc)
     image_source_type = response_form["image_acquisition"]["image_source_type"]
 
     threshold_val = yield select_threshold(context, image_source_desc=image_source_desc,
@@ -167,6 +165,7 @@ def user_input(context):
         yield coroutines.EXIT
 
 # End of UI
+
 
 def main():
     view_manager = view_hook(ViewManager(default_title="Opendrop {}".format(VERSION)))
