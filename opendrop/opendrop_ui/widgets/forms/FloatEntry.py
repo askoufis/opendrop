@@ -32,7 +32,7 @@ class FloatEntry(TextEntry):
         elif value_if_allowed == ".":
             return True
         else:
-            if text in "0123456789.-+":
+            if all(char in "0123456789.-+" for char in text):
                 try:
                     float(value_if_allowed)
                     return True

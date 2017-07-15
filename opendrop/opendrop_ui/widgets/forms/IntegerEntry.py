@@ -34,7 +34,7 @@ class IntegerEntry(TextEntry):
         elif value_if_allowed == '0':
             return False
         else:
-            if text in '0123456789':
+            if all(char in "0123456789-+" for char in text):
                 try:
                     int_value = int(value_if_allowed)
                     return True
