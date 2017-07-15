@@ -1,6 +1,6 @@
 from FormWidget import FormWidget
 
-from opendrop.shims import tkinter_ as tk
+from opendrop.shims import tkinter as tk
 
 class Checkbutton(FormWidget, tk.Checkbutton):
     """

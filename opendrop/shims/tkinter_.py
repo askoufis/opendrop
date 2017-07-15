@@ -1,6 +1,6 @@
 try:
     # for Python2
-    from Tkinter import *
+    import Tkinter as tkinter
 except ImportError:
     # for Python3
-    from tkinter import *
+    import tkinter

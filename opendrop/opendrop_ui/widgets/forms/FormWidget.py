@@ -1,8 +1,8 @@
-from opendrop.shims import tkinter_ as tk
+from opendrop.shims import tkinter as tk
 
 from opendrop.utility.events import Event
 
-class FormWidget(tk.Frame, object):
+class FormWidget(object):
     """
         Base class for all form widgets.
 

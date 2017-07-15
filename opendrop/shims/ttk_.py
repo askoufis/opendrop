@@ -1,6 +1,6 @@
 try:
     # for Python2
-    from ttk import *
+    import ttk
 except ImportError:
     # for Python3
-    from tkinter.ttk import *
+    import tkinter.ttk as ttk

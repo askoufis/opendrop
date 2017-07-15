@@ -1,7 +1,7 @@
 from FormWidget import FormWidget
 
-from opendrop.shims import tkinter_ as tk
-from opendrop.shims import ttk_ as ttk
+from opendrop.shims import tkinter as tk
+from opendrop.shims import ttk
 
 from opendrop.utility.argfiddler import ExtKwargs
 

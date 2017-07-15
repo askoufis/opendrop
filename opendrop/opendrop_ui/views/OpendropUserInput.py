@@ -1,9 +1,9 @@
 import os
 import copy
 
-from opendrop.shims import tkinter_ as tk
+from opendrop.shims import tkinter as tk
 import tkFileDialog, tkSimpleDialog
-from opendrop.shims import ttk_ as ttk
+from opendrop.shims import ttk
 import tkFont
 
 from opendrop.opendrop_ui.view_manager import View

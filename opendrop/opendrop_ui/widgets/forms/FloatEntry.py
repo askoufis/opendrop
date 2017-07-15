@@ -1,6 +1,6 @@
 from TextEntry import TextEntry
 
-from opendrop.shims import tkinter_ as tk
+from opendrop.shims import tkinter as tk
 
 class FloatEntry(TextEntry):
     def __init__(self, master, **options):

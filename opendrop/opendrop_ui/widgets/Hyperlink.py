@@ -1,4 +1,4 @@
-from opendrop.shims import tkinter_ as tk
+from opendrop.shims import tkinter as tk
 import tkFont
 import webbrowser
 
