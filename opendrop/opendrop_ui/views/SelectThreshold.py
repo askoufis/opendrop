@@ -1,14 +1,23 @@
+import cv2
+import numpy as np
+
 from opendrop.constants import ImageSourceOption
 
+from opendrop.opendrop_ui import widgets
 from opendrop.opendrop_ui.view_manager import View
 from opendrop.opendrop_ui.views.utility.scale_from_bounds import scale_from_bounds
 
+from opendrop.resources import resources
+
+from opendrop.shims import tkinter as tk
+
+import opendrop.utility.coroutines as coroutines
 import opendrop.utility.source_loader as source_loader
 from opendrop.utility.vectors import Vector2
 
-import cv2
-from opendrop.shims import tkinter_ as tk
 from PIL import Image, ImageTk
+
+import threading, time
 
 WIDTH_MIN, WIDTH_MAX = 0.4, 0.5
 HEIGHT_MIN, HEIGHT_MAX = 0.4, 0.5
@@ -16,69 +25,135 @@ HEIGHT_MIN, HEIGHT_MAX = 0.4, 0.5
 REL_SIZE_MIN = Vector2(WIDTH_MIN, HEIGHT_MIN)
 REL_SIZE_MAX = Vector2(WIDTH_MAX, HEIGHT_MAX)
 
-DEFAULT_THRESHOLD = 40
-MAX_THRESHOLD = 255
+BACKGROUND_COLOR = "gray90"
+
+FONT = ("Helvetica")
+
+widgets = widgets.preconfigure({
+    "*": {
+        "background": BACKGROUND_COLOR,
+    },
+    "Label": {
+        "font": FONT
+    }
+})
+
+def otsu_threshold_val(image):
+    """
+        Takes in a Pillow.Image image argument and uses OpenCV to calculate the otsu threshold value
+    """
+    image_gray = image.convert("L")
+    image_array_gray = np.array(image_gray)
+    thresh_val, image_array_binarised = cv2.threshold(image_array_gray, 127, 255,
+                                                      cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+
+    return thresh_val
 
 
 class SelectThreshold(View):
     def submit(self):
-        self.events.submit(float(self.slider.get()))
+        thresh_val = self.threshold_slider.value
+
+        self.events.submit(thresh_val)
 
     def cancel(self):
         self.events.submit(None)
 
-    def set_image_source(self, image_source_desc, image_source_type):
-        if image_source_type == ImageSourceOption.LOCAL_IMAGES:
-            self.image_source = source_loader.load(image_source_desc, image_source_type)
-        elif image_source_type == ImageSourceOption.USB_CAMERA:
-            raise NotImplementedError("USBCamera not supported yet")
-        elif image_source_type == ImageSourceOption.FLEA3:
-            raise NotImplementedError("Flea3 not supported yet")
+    def update_base_image(self, image):
+        with self.busy:
+            if not self.alive:
+                self.update_base_image_bind.unbind()
+                return
 
-        screen_res = self.view_manager.screen_resolution
-        image_source_size = self.image_source.size
+            if image:
+                image_gray = image.convert("L")
+                image.close()
 
-        scale = scale_from_bounds(
-            image_size = image_source_size,
-            max_size = REL_SIZE_MAX * screen_res,
-            min_size = REL_SIZE_MIN * screen_res
-        )
+                self.base_image = image_gray
 
-        self.resize_to = (image_source_size * scale).round_to_int()
+        self.update_binarised_image()
 
-    def update_frame(self, slider_val):
-        _, new = cv2.threshold(self.cv_image_resized, float(slider_val), MAX_THRESHOLD, cv2.THRESH_BINARY)
-        self.tk_img = ImageTk.PhotoImage(image=Image.fromarray(new))
-        self.display.configure(image=self.tk_img)
+    def update_binarised_image(self, thresh_val=None):
+        with self.busy:
+            if self.base_image:
+                resized_image = self.base_image.resize(self.resize_to, resample=Image.BILINEAR)
+                image_array = np.array(resized_image)
 
-    def body(self, image_source_desc, image_source_type):
+                thresh_val = thresh_val or self.threshold_slider.value
+
+                ret, image_array_binarised = cv2.threshold(image_array, float(thresh_val), 255, cv2.THRESH_BINARY)
+                image_tk = ImageTk.PhotoImage(Image.fromarray(image_array_binarised))
+
+                self.image_label.configure(image=image_tk)
+                self.image_label.image = image_tk
+
+    def mouse_wheel(self, e):
+        delta = e.delta * 1.3
+        self.threshold_slider.value = self.threshold_slider.value + delta
+
+    def body(self, image_source): #image_source_desc, image_source_type):
         root = self.root
 
-        self.set_image_source(image_source_desc, image_source_type)
+        with self.busy:
+            self.image_source = image_source
 
-        cv_image = cv2.imread(self.image_source.filenames[0], cv2.IMREAD_GRAYSCALE)
-        self.cv_image_resized = cv2.resize(cv_image, (self.resize_to.x, self.resize_to.y), interpolation = cv2.INTER_LINEAR)
+            self.default_threshold_val = otsu_threshold_val(image_source.read()[1])
 
-        self.image_frame = tk.Frame(root, width=self.resize_to[0], height=self.resize_to[1])
-        self.image_frame.grid(row=0, column=0)
+            image_source_fps = None
 
-        _, default = cv2.threshold(self.cv_image_resized, DEFAULT_THRESHOLD, MAX_THRESHOLD, cv2.THRESH_BINARY)
-        self.tk_img = ImageTk.PhotoImage(image=Image.fromarray(default))
+            if isinstance(image_source, source_loader.LocalImages):
+                image_source_fps = 2
+            elif isinstance(image_source, source_loader.USBCameraSource):
+                image_source_fps = None # None specifies as fast as possible
 
-        self.display = tk.Label(self.image_frame, image=self.tk_img)
-        self.display.grid(row=0, column=0)
+            screen_res = self.view_manager.screen_resolution
+            image_source_size = self.image_source.size
 
-        self.slider = tk.Scale(root, to=MAX_THRESHOLD, orient=tk.HORIZONTAL, command=self.update_frame, length=self.resize_to.x - 10)
-        self.slider.set(DEFAULT_THRESHOLD)
-        self.slider.grid(column=0,row=1)
+            self.scale = scale_from_bounds(
+                image_size=image_source_size,
+                max_size=REL_SIZE_MAX * screen_res,
+                min_size=REL_SIZE_MIN * screen_res
+            )
 
-        root.geometry("%dx%d"%(self.resize_to.x, self.resize_to.y + 50))
-        root.resizable(width=False, height=False)
+            self.resize_to = (image_source_size * self.scale).round_to_int()
+
+            # Widgets
+            self.image_label = widgets.Label(root, width=self.resize_to.x, height=self.resize_to.y)
+            self.image_label.pack()
+
+            threshold_slider_frame = widgets.forms.Frame(root, padx="30", pady="10")
+            threshold_slider_frame.pack(fill="both")
+            threshold_slider_frame.columnconfigure(1, weight=1)
+
+            widgets.Label(threshold_slider_frame, text="Threshold:").grid(row=0, column=0)
+            self.threshold_slider = widgets.forms.Scale(threshold_slider_frame,
+                from_=0,
+                to=255,
+                value=self.default_threshold_val
+            )
+            self.threshold_slider.grid(row=0, column=1, sticky="we")
+
+        # Resizing and recentering root
+
+        root.geometry("{0}x{1}".format(*( self.resize_to + (0, 50) )))
         self.center()
+
+        # Root event bindings
+
+        self.image_label.bind("<MouseWheel>", self.mouse_wheel)
 
         root.bind("<space>", lambda e: self.submit())
         root.bind("<Return>", lambda e: self.submit())
+
         root.bind("<Escape>", lambda e: self.cancel())
 
-    def _clear(self):
-        self.image_source.release()
+        # Background tasks
+
+        self.threshold_slider.on_change(self.update_binarised_image)
+        self.update_base_image_bind = self.image_source.playback(
+            fps=image_source_fps,
+            loop=True
+        ).bind(self.update_base_image)
+
+    # def _clear(self):
+    #     self.cancel()
