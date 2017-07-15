@@ -203,6 +203,12 @@ class ImageSource(object):
         print("[DEBUG] Releasing {}".format(self.__class__.__name__))
         self.released = True
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.release()
+
 @add_metaclass(ABCMeta)
 class LiveSource(ImageSource):
     def __init__(self, **kwargs):
