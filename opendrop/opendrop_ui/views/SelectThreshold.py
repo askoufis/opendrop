@@ -61,15 +61,15 @@ class SelectThreshold(View):
 
     def update_base_image(self, image):
         with self.busy:
-            if not self.alive:
+            if self.alive:
+                if image:
+                    image_gray = image.convert("L")
+                    image.close()
+
+                    self.base_image = image_gray
+            else:
                 self.update_base_image_bind.unbind()
                 return
-
-            if image:
-                image_gray = image.convert("L")
-                image.close()
-
-                self.base_image = image_gray
 
         self.update_binarised_image()
 
