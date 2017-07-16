@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from opendrop.constants import ImageSourceOption
+from opendrop.constants import ImageSourceOption, MOUSE_BUTTON_R
 
 from opendrop.opendrop_ui import widgets
 from opendrop.opendrop_ui.view_manager import View
@@ -154,6 +154,7 @@ class SelectThreshold(View):
 
         root.bind("<space>", lambda e: self.submit())
         root.bind("<Return>", lambda e: self.submit())
+        root.bind(MOUSE_BUTTON_R, lambda e: self.submit())
 
         root.bind("<Escape>", lambda e: self.cancel())
 
