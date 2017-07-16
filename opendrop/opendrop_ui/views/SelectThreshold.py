@@ -75,17 +75,28 @@ class SelectThreshold(View):
 
     def update_binarised_image(self, thresh_val=None):
         with self.busy:
+        # Try to acquire the lock and if failed, just skip this function, it's not a huge deal since
+        # this is only updating the display image and the base image updates on a regular basis
+        # which will then call update_binarised_image to refresh the display image.
+        #
+        # Don't block if lock is not free since this is running on the main thread, this issue
+        # occurs else where as well and is a bit finicky.
+        lock_acquired = self.busy.acquire(False)
+        if lock_acquired:
             if self.base_image:
-                resized_image = self.base_image.resize(self.resize_to, resample=Image.BILINEAR)
-                image_array = np.array(resized_image)
+                try:
+                    resized_image = self.base_image.resize(self.resize_to, resample=Image.BILINEAR)
+                    image_array = np.array(resized_image)
 
-                thresh_val = thresh_val or self.threshold_slider.value
+                    thresh_val = thresh_val or self.threshold_slider.value
 
-                ret, image_array_binarised = cv2.threshold(image_array, float(thresh_val), 255, cv2.THRESH_BINARY)
-                image_tk = ImageTk.PhotoImage(Image.fromarray(image_array_binarised))
+                    ret, image_array_binarised = cv2.threshold(image_array, float(thresh_val), 255, cv2.THRESH_BINARY)
+                    image_tk = ImageTk.PhotoImage(Image.fromarray(image_array_binarised))
 
-                self.image_label.configure(image=image_tk)
-                self.image_label.image = image_tk
+                    self.image_label.configure(image=image_tk)
+                    self.image_label.image = image_tk
+                finally:
+                    self.busy.release()
 
     def mouse_wheel(self, e):
         delta = e.delta * 1.3
