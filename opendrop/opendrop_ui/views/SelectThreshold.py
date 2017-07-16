@@ -73,8 +73,7 @@ class SelectThreshold(View):
 
         self.update_binarised_image()
 
-    def update_binarised_image(self, thresh_val=None):
-        with self.busy:
+    def update_binarised_image(self, slider=None, thresh_val=None):
         # Try to acquire the lock and if failed, just skip this function, it's not a huge deal since
         # this is only updating the display image and the base image updates on a regular basis
         # which will then call update_binarised_image to refresh the display image.
@@ -160,7 +159,7 @@ class SelectThreshold(View):
 
         # Background tasks
 
-        self.threshold_slider.on_change(self.update_binarised_image)
+        self.threshold_slider.on_change.bind(self.update_binarised_image)
         self.update_base_image_bind = self.image_source.playback(
             fps=image_source_fps,
             loop=True
