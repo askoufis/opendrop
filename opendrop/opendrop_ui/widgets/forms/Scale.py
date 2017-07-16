@@ -1,5 +1,4 @@
 from FormWidget import FormWidget
-from FloatSpinbox import FloatSpinbox
 from opendrop.shims import tkinter as tk
 from opendrop.shims import ttk
 import tkFont
