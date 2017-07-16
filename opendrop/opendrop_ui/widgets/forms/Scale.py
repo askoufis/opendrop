@@ -90,7 +90,6 @@ class Scale(FormWidget, tk.Frame):
         value = max(min(value, max_value), min_value)
 
         super(Scale, Scale).value.__set__(self, value)
-        print(self.value)
         self.set_spinbox(value)
 
     def set_spinbox(self, new_value):
