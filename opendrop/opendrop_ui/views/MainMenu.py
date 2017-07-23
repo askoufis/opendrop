@@ -1,33 +1,37 @@
-from opendrop.shims import tkinter as tk
-import tkFont
-from PIL import Image, ImageTk
+from opendrop.constants import OperationMode
 
-from opendrop.opendrop_ui.view_manager import View
+from opendrop.opendrop_ui.view_core import BaseView
 from opendrop.opendrop_ui import widgets
 
 from opendrop.resources import resources
-from opendrop.constants import OperationMode
 
-class MainMenu(View):
+from PIL import Image, ImageTk
+
+from opendrop.shims import tkinter as tk
+import tkFont
+
+class MainMenu(BaseView):
+    TITLE = "Main Menu"
+
     def submit(self, operation_mode):
-        self.events.submit(operation_mode)
+        self.events.on_submit(operation_mode)
 
     def body(self):
-        root = self.root
+        top_level = self.top_level
 
-        root.geometry("550x550")
+        top_level.geometry("550x550")
 
-        root.configure(padx = 0, pady = 0)
+        top_level.configure(padx = 0, pady = 0)
 
         self.center()
 
         logo_image = ImageTk.PhotoImage(Image.open(resources("images/logo/logo.png")))
 
-        logo = tk.Label(root, image = logo_image, width = 250, height = 333)
+        logo = tk.Label(top_level, image = logo_image, width = 250, height = 333)
         logo.image = logo_image
         logo.pack(side = "left", anchor = "n", padx = 10, pady = 10)
 
-        gpl_link = widgets.Hyperlink(root, text = "under GPl license",
+        gpl_link = widgets.Hyperlink(top_level, text = "under GPl license",
                                      url = r"http://www.gnu.org/copyleft/gpl.html",
                                      font = tkFont.Font(size = 9))
         gpl_link.pack(side = "left", anchor = "s", pady = 10, fill = None, expand = None)
@@ -37,7 +41,7 @@ class MainMenu(View):
 
         frame1_labeltext = "opendrop:"
 
-        frame1 = tk.Frame(root, bd = 20, highlightbackground = "black", highlightcolor = "black",
+        frame1 = tk.Frame(top_level, bd = 20, highlightbackground = "black", highlightcolor = "black",
                            highlightthickness = 1, width = 150, height = 280)
         frame1.propagate(0)
         frame1.pack(side = "top", anchor = "e")
@@ -76,7 +80,7 @@ class MainMenu(View):
 
         frame2_labeltext = "contactAn:"
 
-        frame2 = tk.Frame(root, bd = 20, highlightbackground = "black", highlightcolor = "black",
+        frame2 = tk.Frame(top_level, bd = 20, highlightbackground = "black", highlightcolor = "black",
                           highlightthickness = 1, width = 150, height = 280)
         frame2.pack(side = "top", anchor = "e")
         frame2.propagate(0)

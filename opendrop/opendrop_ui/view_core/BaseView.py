@@ -3,17 +3,19 @@ from opendrop.utility.structs import Struct
 
 import threading
 
-class View(object):
-    def __init__(self, view_manager, passthrough_kwargs):
+class BaseView(object):
+    TITLE = ""
 
-        self.view_manager = view_manager
-        self.root = view_manager.root
+    def __init__(self, window_manager, passthrough_kwargs):
+
+        self.window_manager = window_manager
+        self.top_level = window_manager.top_level
         self.alive = True
         self.busy = threading.Lock()
 
         self.events = EventsManager()
         self.core_events = EventsManager({
-            "view_cleared": PersistentEvent()
+            "on_clear": PersistentEvent()
         })
 
         self.body(**passthrough_kwargs)
@@ -27,7 +29,7 @@ class View(object):
         # where the Tk .mainloop() is also running on, if the main thread is blocked, program could
         # become unresponsive
         if self.busy.acquire(False) is False:
-            self.root.after(0, self.clear)
+            self.top_level.after(0, self.clear)
             return
 
         # Do view specific clear
@@ -35,13 +37,13 @@ class View(object):
 
         self.events.unbind_all()
 
-        for child in self.root.winfo_children():
+        for child in self.top_level.winfo_children():
             child.destroy()
 
         self.alive = False
         self.busy.release()
 
-        self.core_events.view_cleared()
+        self.core_events.on_clear.fire()
 
         self.core_events.unbind_all()
 
@@ -49,11 +51,11 @@ class View(object):
         pass
 
     def center(self):
-        self.root.update_idletasks()
+        self.top_level.update_idletasks()
 
-        screen_w, screen_h = self.view_manager.screen_resolution
-        window_w, window_h = self.root.winfo_width(), self.root.winfo_height()
+        screen_w, screen_h = self.window_manager.screen_resolution
+        window_w, window_h = self.top_level.winfo_width(), self.top_level.winfo_height()
 
         x = screen_w/2 - window_w/2
         y = screen_h/2 - window_h/2
-        self.root.geometry("{0}x{1}+{2}+{3}".format(window_w, window_h, x, y))
+        self.top_level.geometry("{0}x{1}+{2}+{3}".format(window_w, window_h, x, y))

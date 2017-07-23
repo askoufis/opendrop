@@ -1,11 +1,13 @@
-from opendrop.opendrop_ui.view_manager import View
+from opendrop.opendrop_ui.view_core import BaseView
 from opendrop.opendrop_ui import widgets
 
-class HelloWorld(View):
-    def body(self):
-        root = self.root
+class HelloWorld(BaseView):
+    TITLE = "Hello, world"
 
-        root.geometry("200x100")
+    def body(self):
+        top_level = self.top_level
+
+        top_level.geometry("200x100")
 
         self.center()
 

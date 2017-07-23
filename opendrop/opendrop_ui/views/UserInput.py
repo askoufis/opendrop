@@ -6,7 +6,7 @@ import tkFileDialog, tkSimpleDialog
 from opendrop.shims import ttk
 import tkFont
 
-from opendrop.opendrop_ui.view_manager import View
+from opendrop.opendrop_ui.view_core import BaseView
 from opendrop.opendrop_ui import widgets
 
 from opendrop.constants import ImageSourceOption
@@ -56,7 +56,9 @@ widgets = widgets.preconfigure({
     }
 })
 
-class OpendropUserInput(View):
+class UserInput(BaseView):
+    TITLE = "Configuration"
+
     def image_source_change(self, self_, val):
         if val == "Local images":
             self.save_images_checkbutton.disable()
@@ -64,55 +66,52 @@ class OpendropUserInput(View):
             self.save_images_checkbutton.normal()
 
     def submit(self):
-
-        # TODO: Export preferences
-
         if self.image_source_type.value == ImageSourceOption.LOCAL_IMAGES:
-            image_source = tkFileDialog.askopenfilenames(
-                parent = self.root,
+            image_source_desc = tkFileDialog.askopenfilenames(
+                parent = self.top_level,
                 title = "Select files",
                 initialdir = os.getcwd()
             )
 
-            if len(image_source) == 0:
+            if len(image_source_desc) == 0:
                 # Cancel operation
                 return
 
             # Sort the input files in lexicographic order
-            image_source = sorted(image_source)
+            image_source_desc = sorted(image_source_desc)
 
-            self.image_source.value = image_source
-            self.num_frames.value = len(image_source)
+            self.image_source_desc.value = image_source_desc
+            self.num_frames.value = len(image_source_desc)
         elif self.image_source_type.value == ImageSourceOption.USB_CAMERA:
-            image_source = tkSimpleDialog.askinteger(
-                parent = self.root,
+            image_source_desc = tkSimpleDialog.askinteger(
+                parent = self.top_level,
                 title = "USB Camera",
                 prompt = "Camera index",
                 initialvalue = 0
             )
 
-            if image_source is None:
+            if image_source_desc is None:
                 # Cancel operation
                 return
 
-            self.image_source.value = image_source
+            self.image_source_desc.value = image_source_desc
 
-        self.events.submit.fire(self.form.submit())
+        self.events.on_submit.fire(self.form.submit())
 
     def cancel(self):
-        self.events.submit.fire(None)
+        self.events.on_submit.fire(None)
 
-    def restore_form(self, data):
+    def restore(self, data):
         self.form.update(data)
 
     def body(self):
-        root = self.root
+        top_level = self.top_level
 
-        root.geometry("650x550")
+        top_level.geometry("650x550")
 
-        root.configure(background = BACKGROUND_COLOR, padx = 50)
+        top_level.configure(background = BACKGROUND_COLOR, padx = 50)
 
-        form = widgets.forms.Frame(root)
+        form = widgets.forms.Frame(top_level)
         form.pack()
 
         form.columnconfigure(0, weight = 1)
@@ -193,7 +192,7 @@ class OpendropUserInput(View):
             .grid(row = 0, column = 0, pady = 2, sticky = "w")
         widgets.forms.Checkbutton(pclist_frame, text = "Profiles", name = "profiles_boole") \
             .grid(row = 1, column = 0, pady = 2, sticky = "w")
-        widgets.forms.Checkbutton(pclist_frame, text = "Physical quantities", name = "IFT_boole") \
+        widgets.forms.Checkbutton(pclist_frame, text = "Physical quantities", name = "physical_quantities_boole") \
             .grid(row = 2, column = 0, pady = 2, sticky = "w")
 
         # Save location
@@ -255,7 +254,9 @@ class OpendropUserInput(View):
 
         #-------- Hidden value for selected files
 
-        self.image_source = widgets.forms.Value(image_acquisition_frame, name = "image_source")
+        self.image_source_desc = widgets.forms.Value(image_acquisition_frame,
+            name = "image_source_desc"
+        )
 
         #-------- Number of frames
 
@@ -304,7 +305,7 @@ class OpendropUserInput(View):
 
         # Run/Quit buttons
 
-        run_quit_frame = widgets.Frame(root)
+        run_quit_frame = widgets.Frame(top_level)
         run_quit_frame.pack(padx = 10, pady = 10, fill = "both") #grid(row = 4, column = 0, columnspan = 2, padx = 10, pady = 10, sticky = "we")
         run_quit_frame.columnconfigure(0, weight = 1)
         run_quit_frame.columnconfigure(1, weight = 1)
@@ -321,12 +322,12 @@ class OpendropUserInput(View):
         )
         run_button.grid(row = 0, column = 1)
 
-        root.bind("<Return>", lambda _: self.submit())
-        root.bind("<Escape>", lambda _: self.cancel())
+        top_level.bind("<Return>", lambda _: self.submit())
+        top_level.bind("<Escape>", lambda _: self.cancel())
 
         # Homepage url Hyperlink
 
-        footer_frame = widgets.Frame(root)
+        footer_frame = widgets.Frame(top_level)
         footer_frame.pack(padx = 10, pady = 10, fill = "both")
 
         widgets.Hyperlink(footer_frame,

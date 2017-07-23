@@ -1,7 +1,7 @@
 from opendrop.constants import ImageSourceOption, MOUSE_BUTTON_R
 
 from opendrop.opendrop_ui import widgets
-from opendrop.opendrop_ui.view_manager import View
+from opendrop.opendrop_ui.view_core import BaseView
 from opendrop.opendrop_ui.views.utility.scale_from_bounds import scale_from_bounds
 
 from opendrop.resources import resources
@@ -10,7 +10,7 @@ from opendrop.shims import tkinter as tk
 
 import opendrop.utility.coroutines as coroutines
 import opendrop.utility.source_loader as source_loader
-from opendrop.utility.vectors import Vector2
+from opendrop.utility.vectors import Vector2, BBox2
 
 from PIL import Image, ImageTk
 
@@ -32,17 +32,19 @@ HEIGHT_MIN, HEIGHT_MAX = 0.4, 0.5
 REL_SIZE_MIN = Vector2(WIDTH_MIN, HEIGHT_MIN)
 REL_SIZE_MAX = Vector2(WIDTH_MAX, HEIGHT_MAX)
 
-class SelectRegion(View):
+class SelectRegion(BaseView):
+    TITLE = "Select regions"
+    
     def submit(self):
         region = self.selector.value
 
         if not region.size == (0, 0):
             region = (region / self.scale).round_to_int()
 
-            self.events.submit(region)
+            self.events.on_submit.fire(region)
 
     def cancel(self):
-        self.events.submit(None)
+        self.events.on_submit.fire(None)
 
     @coroutines.co
     def update_image(self, image):
@@ -63,7 +65,7 @@ class SelectRegion(View):
 
 
     def body(self, image_source): #image_source_desc, image_source_type):
-        root = self.root
+        top_level = self.top_level
 
         with self.busy:
             self.image_source = image_source
@@ -75,7 +77,7 @@ class SelectRegion(View):
             elif isinstance(image_source, source_loader.USBCameraSource):
                 image_source_fps = None # None specifies as fast as possible
 
-            screen_res = self.view_manager.screen_resolution
+            screen_res = self.window_manager.screen_resolution
             image_source_size = self.image_source.size
 
             self.scale = scale_from_bounds(
@@ -88,21 +90,21 @@ class SelectRegion(View):
 
             # Widgets
 
-            self.selector = widgets.forms.RegionSelector(root, size = self.resize_to)
+            self.selector = widgets.forms.RegionSelector(top_level, size = self.resize_to)
             self.selector.pack()
 
-        # Resizing and recentering root
+        # Resizing and recentering top_level
 
-        root.geometry("{0}x{1}".format(*self.resize_to))
+        top_level.geometry("{0}x{1}".format(*self.resize_to))
         self.center()
 
-        # Root event bindings
+        # top_level event bindings
 
-        root.bind("<space>", lambda e: self.submit())
-        root.bind("<Return>", lambda e: self.submit())
-        root.bind(MOUSE_BUTTON_R, lambda e: self.submit())
+        top_level.bind("<space>", lambda e: self.submit())
+        top_level.bind("<Return>", lambda e: self.submit())
+        top_level.bind(MOUSE_BUTTON_R, lambda e: self.submit())
 
-        root.bind("<Escape>", lambda e: self.cancel())
+        top_level.bind("<Escape>", lambda e: self.cancel())
 
         # Background tasks
 

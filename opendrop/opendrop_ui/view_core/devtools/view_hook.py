@@ -50,10 +50,10 @@ def import_by_filename(filename):
         sys.exit("Python 2.0 or newer is required for 'import_by_filename'.")
 
 class ViewEventsHook(object):
-    def __init__(self, view_manager):
+    def __init__(self, window_manager):
         self.current_view = None
 
-        view_manager.events.view_change.bind(self.view_change)
+        window_manager.on_view_change.bind(self.view_change)
 
     def view_change(self, new_view):
         if new_view:
@@ -79,18 +79,18 @@ class ViewEventsHook(object):
             args=pargs
         ))
 
-def view_hook(view_manager):
-    ViewEventsHook(view_manager)
+def view_hook(window_manager):
+    ViewEventsHook(window_manager)
 
     log("Hooked initialised")
 
-    return view_manager
+    return window_manager
 
 #
 # class ShowViewController(Controller):
 #     @bind
 #     def show_view(self, reply, view):
-#         vm = self.view_manager
+#         vm = self.window_manager
 #
 #         view = vm.set_view(view)
 #
@@ -107,12 +107,12 @@ def view_hook(view_manager):
 #
 #
 #     model = Model()
-#     view_manager = ViewManager()
-#     controller = hook(ShowViewController(model = model, view_manager = view_manager))
+#     window_manager = ViewManager()
+#     controller = hook(ShowViewController(model = model, window_manager = window_manager))
 #
 #     model.do_async("show_view", view)
 #
-#     view_manager.mainloop()
+#     window_manager.mainloop()
 #
 # if __name__ == '__main__':
 #     # Dont include the script name as the first argument

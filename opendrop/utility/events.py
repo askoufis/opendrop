@@ -79,6 +79,8 @@ class Event(object):
 
 class PersistentEvent(Event):
     """
+        TODO: doc needs updating, set and unset was decided to be renamed to fire and unfire
+
         Similar to an Event but can be 'set' or 'unset', when a PersistentEvent is 'set', any
         current and new listeners bound to the event will be fired with the arguments passed to
         'set'.
@@ -110,27 +112,18 @@ class PersistentEvent(Event):
     def is_set(self):
         return self._set
 
-    def set(self, *args, **kwargs):
+    def fire(self, *args, **kwargs):
         self._set = True
 
         self._args = args
         self._kwargs = kwargs
 
-        self._fire(*args, **kwargs)
-
-    __call__ = set
-
-    def unset(self):
-        self._set = False
-
-    def fire(self, *args, **kwargs):
-        raise ValueError(
-            "Can't manually fire a PersistentEvent, use .set() instead"
-        )
-
-    # Make .fire() a private method so it can't be accidentally called
-    def _fire(self, *args, **kwargs):
         return super(PersistentEvent, self).fire(*args, **kwargs)
+
+    __call__ = fire
+
+    def unfire(self):
+        self._set = False
 
     def bind(self, listener, num_calls=None):
         binding = super(PersistentEvent, self).bind(listener, num_calls)
@@ -204,7 +197,7 @@ class WaitLock(PersistentEvent):
     def lock(self):
         # Locking unbinds all current listeners
         self.unbind_all()
-        self.unset()
+        self.unfire()
 
         self.start_time = timeit.default_timer()
 
@@ -219,7 +212,7 @@ class WaitLock(PersistentEvent):
         elapsed_time = timeit.default_timer() - self.start_time
         if self.is_locked():
             if elapsed_time > self.min_wait:
-                self.set()
+                self.fire()
             else:
                 self.unlock_after(self.min_wait - elapsed_time)
 

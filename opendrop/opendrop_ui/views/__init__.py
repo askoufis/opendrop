@@ -1,5 +1,5 @@
 from MainMenu import MainMenu
 from HelloWorld import HelloWorld
-from OpendropUserInput import OpendropUserInput
+from UserInput import UserInput
 from SelectRegion import SelectRegion
 from SelectThreshold import SelectThreshold

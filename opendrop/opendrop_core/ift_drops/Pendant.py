@@ -1,0 +1,2 @@
+class Pendant(object):
+    pass

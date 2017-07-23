@@ -4,7 +4,7 @@ import numpy as np
 from opendrop.constants import ImageSourceOption, MOUSE_BUTTON_R
 
 from opendrop.opendrop_ui import widgets
-from opendrop.opendrop_ui.view_manager import View
+from opendrop.opendrop_ui.view_core import BaseView
 from opendrop.opendrop_ui.views.utility.scale_from_bounds import scale_from_bounds
 
 from opendrop.resources import resources
@@ -50,14 +50,16 @@ def otsu_threshold_val(image):
     return thresh_val
 
 
-class SelectThreshold(View):
+class SelectThreshold(BaseView):
+    TITLE = "Select threshold value"
+    
     def submit(self):
         thresh_val = self.threshold_slider.value
 
-        self.events.submit(thresh_val)
+        self.events.on_submit.fire(thresh_val)
 
     def cancel(self):
-        self.events.submit(None)
+        self.events.on_submit.fire(None)
 
     def update_base_image(self, image):
         with self.busy:
@@ -102,7 +104,7 @@ class SelectThreshold(View):
         self.threshold_slider.value = self.threshold_slider.value + delta
 
     def body(self, image_source): #image_source_desc, image_source_type):
-        root = self.root
+        top_level = self.top_level
 
         with self.busy:
             self.image_source = image_source
@@ -116,7 +118,7 @@ class SelectThreshold(View):
             elif isinstance(image_source, source_loader.USBCameraSource):
                 image_source_fps = None # None specifies as fast as possible
 
-            screen_res = self.view_manager.screen_resolution
+            screen_res = self.window_manager.screen_resolution
             image_source_size = self.image_source.size
 
             self.scale = scale_from_bounds(
@@ -128,10 +130,10 @@ class SelectThreshold(View):
             self.resize_to = (image_source_size * self.scale).round_to_int()
 
             # Widgets
-            self.image_label = widgets.Label(root, width=self.resize_to.x, height=self.resize_to.y)
+            self.image_label = widgets.Label(top_level, width=self.resize_to.x, height=self.resize_to.y)
             self.image_label.pack()
 
-            threshold_slider_frame = widgets.forms.Frame(root, padx="30", pady="10")
+            threshold_slider_frame = widgets.forms.Frame(top_level, padx="30", pady="10")
             threshold_slider_frame.pack(fill="both")
             threshold_slider_frame.columnconfigure(1, weight=1)
 
@@ -143,20 +145,20 @@ class SelectThreshold(View):
             )
             self.threshold_slider.grid(row=0, column=1, sticky="we")
 
-        # Resizing and recentering root
+        # Resizing and recentering top_level
 
-        root.geometry("{0}x{1}".format(*( self.resize_to + (0, 50) )))
+        top_level.geometry("{0}x{1}".format(*( self.resize_to + (0, 50) )))
         self.center()
 
-        # Root event bindings
+        # top_level event bindings
 
         self.image_label.bind("<MouseWheel>", self.mouse_wheel)
 
-        root.bind("<space>", lambda e: self.submit())
-        root.bind("<Return>", lambda e: self.submit())
-        root.bind(MOUSE_BUTTON_R, lambda e: self.submit())
+        top_level.bind("<space>", lambda e: self.submit())
+        top_level.bind("<Return>", lambda e: self.submit())
+        top_level.bind(MOUSE_BUTTON_R, lambda e: self.submit())
 
-        root.bind("<Escape>", lambda e: self.cancel())
+        top_level.bind("<Escape>", lambda e: self.cancel())
 
         # Background tasks
 
