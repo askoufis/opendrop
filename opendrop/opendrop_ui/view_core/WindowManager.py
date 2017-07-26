@@ -1,4 +1,4 @@
-import opendrop.utility.coroutines as coroutines
+from opendrop.utility import coroutines
 
 from opendrop.utility.events import Event
 

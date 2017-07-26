@@ -174,7 +174,7 @@ class ImageSource(object):
         def update_loop():
             try:
                 timestamp, image, wait_lock = next(frames_gen)
-                playback_event(image)
+                playback_event.fire(image)
 
                 min_wait = 0
 
@@ -185,7 +185,7 @@ class ImageSource(object):
 
                 wait_lock(min_wait=min_wait).bind(update_loop)
             except StopIteration:
-                playback_event(None)
+                playback_event.fire(None)
 
         update_loop()
 

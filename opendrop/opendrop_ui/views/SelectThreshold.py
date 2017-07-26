@@ -1,3 +1,5 @@
+# TODO: change to select canny instead of threshold
+
 import cv2
 import numpy as np
 
@@ -11,8 +13,10 @@ from opendrop.resources import resources
 
 from opendrop.shims import tkinter as tk
 
-import opendrop.utility.coroutines as coroutines
-import opendrop.utility.source_loader as source_loader
+from opendrop.utility import coroutines
+from opendrop.utility import comvis
+from opendrop.utility import source_loader
+
 from opendrop.utility.vectors import Vector2
 
 from PIL import Image, ImageTk
@@ -38,25 +42,14 @@ widgets = widgets.preconfigure({
     }
 })
 
-def otsu_threshold_val(image):
-    """
-        Takes in a Pillow.Image image argument and uses OpenCV to calculate the otsu threshold value
-    """
-    image_gray = image.convert("L")
-    image_array_gray = np.array(image_gray)
-    thresh_val, image_array_binarised = cv2.threshold(image_array_gray, 127, 255,
-                                                      cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-
-    return thresh_val
-
-
 class SelectThreshold(BaseView):
-    TITLE = "Select threshold value"
-    
-    def submit(self):
-        thresh_val = self.threshold_slider.value
+    TITLE = "Canny edge detection"
 
-        self.events.on_submit.fire(thresh_val)
+    def submit(self):
+        thresh_min = self.threshold_slider_min.value
+        thresh_max = self.threshold_slider_max.value
+
+        self.events.on_submit.fire(thresh_min, thresh_max)
 
     def cancel(self):
         self.events.on_submit.fire(None)
@@ -75,7 +68,7 @@ class SelectThreshold(BaseView):
 
         self.update_binarised_image()
 
-    def update_binarised_image(self, slider=None, thresh_val=None):
+    def update_binarised_image(self):
         # Try to acquire the lock and if failed, just skip this function, it's not a huge deal since
         # this is only updating the display image and the base image updates on a regular basis
         # which will then call update_binarised_image to refresh the display image.
@@ -89,10 +82,11 @@ class SelectThreshold(BaseView):
                     resized_image = self.base_image.resize(self.resize_to, resample=Image.BILINEAR)
                     image_array = np.array(resized_image)
 
-                    thresh_val = thresh_val or self.threshold_slider.value
+                    thresh_max = self.threshold_slider_max.value
+                    thresh_min = float(self.threshold_slider_min.value)/100 * thresh_max
 
-                    ret, image_array_binarised = cv2.threshold(image_array, float(thresh_val), 255, cv2.THRESH_BINARY)
-                    image_tk = ImageTk.PhotoImage(Image.fromarray(image_array_binarised))
+                    image_array = cv2.Canny(image_array, thresh_min, thresh_max)
+                    image_tk = ImageTk.PhotoImage(Image.fromarray(image_array))
 
                     self.image_label.configure(image=image_tk)
                     self.image_label.image = image_tk
@@ -101,7 +95,7 @@ class SelectThreshold(BaseView):
 
     def mouse_wheel(self, e):
         delta = e.delta * 1.3
-        self.threshold_slider.value = self.threshold_slider.value + delta
+        self.threshold_slider_max.value = self.threshold_slider_max.value + delta
 
     def body(self, image_source): #image_source_desc, image_source_type):
         top_level = self.top_level
@@ -109,7 +103,7 @@ class SelectThreshold(BaseView):
         with self.busy:
             self.image_source = image_source
 
-            self.default_threshold_val = otsu_threshold_val(image_source.read()[1])
+            self.default_threshold_val = comvis.otsu_threshold_val(image_source.read()[1])
 
             image_source_fps = None
 
@@ -137,17 +131,27 @@ class SelectThreshold(BaseView):
             threshold_slider_frame.pack(fill="both")
             threshold_slider_frame.columnconfigure(1, weight=1)
 
-            widgets.Label(threshold_slider_frame, text="Threshold:").grid(row=0, column=0)
-            self.threshold_slider = widgets.forms.Scale(threshold_slider_frame,
+            widgets.Label(threshold_slider_frame, text="Max:", anchor="w") \
+                .grid(row=0, column=0, sticky="w")
+            self.threshold_slider_max = widgets.forms.Scale(threshold_slider_frame,
                 from_=0,
                 to=255,
                 value=self.default_threshold_val
             )
-            self.threshold_slider.grid(row=0, column=1, sticky="we")
+            self.threshold_slider_max.grid(row=0, column=1, sticky="we")
+
+            widgets.Label(threshold_slider_frame, text="Min (% of max):", anchor="w") \
+                .grid(row=1, column=0, sticky="w")
+            self.threshold_slider_min = widgets.forms.Scale(threshold_slider_frame,
+                from_=0,
+                to=100,
+                value=50
+            )
+            self.threshold_slider_min.grid(row=1, column=1, sticky="we")
 
         # Resizing and recentering top_level
 
-        top_level.geometry("{0}x{1}".format(*( self.resize_to + (0, 50) )))
+        top_level.geometry("{0}x{1}".format(*( self.resize_to + (0, 90) )))
         self.center()
 
         # top_level event bindings
@@ -162,7 +166,9 @@ class SelectThreshold(BaseView):
 
         # Background tasks
 
-        self.threshold_slider.on_change.bind(self.update_binarised_image)
+        self.threshold_slider_max.on_change.bind(lambda widget, val: self.update_binarised_image())
+        self.threshold_slider_min.on_change.bind(lambda widget, val: self.update_binarised_image())
+
         self.update_base_image_bind = self.image_source.playback(
             fps=image_source_fps,
             loop=True

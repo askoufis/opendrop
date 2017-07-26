@@ -1,3 +1,5 @@
+# TODO: add Gravity input box
+
 import os
 import copy
 
@@ -56,7 +58,7 @@ widgets = widgets.preconfigure({
     }
 })
 
-class UserInput(BaseView):
+class OpendropConfig(BaseView):
     TITLE = "Configuration"
 
     def image_source_change(self, self_, val):

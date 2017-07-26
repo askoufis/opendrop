@@ -8,8 +8,8 @@ from opendrop.resources import resources
 
 from opendrop.shims import tkinter as tk
 
-import opendrop.utility.coroutines as coroutines
-import opendrop.utility.source_loader as source_loader
+from opendrop.utility import coroutines
+from opendrop.utility import source_loader
 from opendrop.utility.vectors import Vector2, BBox2
 
 from PIL import Image, ImageTk
@@ -34,7 +34,7 @@ REL_SIZE_MAX = Vector2(WIDTH_MAX, HEIGHT_MAX)
 
 class SelectRegion(BaseView):
     TITLE = "Select regions"
-    
+
     def submit(self):
         region = self.selector.value
 

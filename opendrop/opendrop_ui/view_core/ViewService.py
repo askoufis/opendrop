@@ -1,6 +1,6 @@
 from opendrop.shims import tkinter as tk
 
-import opendrop.utility.coroutines as coroutines
+from opendrop.utility import coroutines
 
 from opendrop.opendrop_ui.view_core.WindowManager import WindowManager
 
