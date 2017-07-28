@@ -56,81 +56,62 @@ class Throttler(object):
             return self.target_avg_lap_time
 
 class FrameIterator(object):
-    def __init__(self, image_source, num_frames=None, interval=None, loop=False):
+    def __init__(self, image_source, num_frames=float("inf"), interval=-1, loop=False):
         self.image_source = image_source
 
         self.frames_left = num_frames
         self.interval = interval
         self.loop = loop
 
-        self.start_time = timeit.default_timer()
+        self.timestamp_offset = None
 
-        self.throttler = interval and Throttler(interval)
-
-         # Initialises locked, first call to read_next_image will unlock it
-        self.wait_lock = WaitLock()
-
-        self.queued_image = None
-        self.queued_image_timestamp = 0
-
-        # Prepare the first image
-        self.prepare_next()
-
-        # Make sure prepare_next was successful
-        if self.queued_image:
-            # Timestamp offset is used to offset the first image's timestamp to 0
-            self.timestamp_offset = -self.queued_image_timestamp
-
-    def prepare_next(self):
-        try:
-            if self.frames_left is None or self.frames_left > 0:
-                self.queued_image_timestamp, self.queued_image = self.image_source.read()
-                if self.frames_left: self.frames_left -= 1
-            else:
-                raise ValueError
-        except ValueError:
-            self.queued_image_timestamp, self.queued_image = None, None
-        finally:
-            self.wait_lock.unlock()
+        self.throttler = interval != -1 and Throttler(interval)
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if self.wait_lock.is_locked():
-            raise ValueError("Can't get next value, wait_lock is still locked")
-        if self.queued_image is None:
-            if self.frames_left:
-                raise ValueError("FrameIterator terminated early")
-            else:
+        if self.frames_left > 0:
+            timestamp, image = self.image_source.read()
+
+            if timestamp is None and image is None:
                 raise StopIteration
 
-         # Reset the WaitLock
-        del self.wait_lock
-        self.wait_lock = WaitLock()
+            if self.timestamp_offset is None:
+                # timestamp_offset is used so the first image timestamp is 0, and subsequent
+                # timestamps are relative to the first image
+                self.timestamp_offset = -timestamp
+
+            timestamp += self.timestamp_offset
+
+            if self.frames_left: self.frames_left -= 1
+        else:
+            raise StopIteration
+
+        if self.frames_left > 0:
+            if isinstance(self.image_source, LiveSource):
+                hold_for = self.throttler and self.throttler.lap() or 0
+
+                if hold_for < 0:
+                    print(
+                        "[WARNING] Iterator not keeping up with specified interval ({:.2f}s behind)"
+                        .format(-hold_for)
+                    )
+            elif isinstance(self.image_source, RecordedSource):
+                hold_for = self.interval
+
+                if hold_for is not None:
+                    self.image_source.advance(hold_for, wrap_around=self.loop)
+                else: # Interval not specified, advance by one frame
+                    self.image_source.advance_index(1, wrap_around=self.loop)
+        else:
+            hold_for = 0
 
         return_values = (
-            self.queued_image_timestamp + self.timestamp_offset,
-            self.queued_image,
-            self.wait_lock
+            timestamp + self.timestamp_offset,
+            image,
+            hold_for
         )
-
-        if isinstance(self.image_source, LiveSource):
-            hold_for = self.throttler and self.throttler.lap() or 0
-            if hold_for < 0:
-                print(
-                    "[WARNING] Iterator not keeping up with specified interval ({}s behind)"
-                    .format(-hold_for)
-                )
-            threading.Timer(hold_for, self.prepare_next).start()
-        elif isinstance(self.image_source, RecordedSource):
-            hold_for = self.interval
-            if hold_for is not None:
-                self.image_source.advance(hold_for, wrap_around=self.loop)
-            else:
-                self.image_source.advance_index(1, wrap_around=self.loop)
-
-            threading.Thread(target=self.prepare_next).start()
 
         return return_values
 
@@ -164,32 +145,6 @@ class ImageSource(object):
                 return Vector2(image.size)
         else:
             return Vector2(0, 0)
-
-    def playback(self, fps=None, loop=False):
-        frame_duration = fps and 1.0/fps
-
-        playback_event = PersistentEvent()
-        frames_gen = iter(self.frames(interval=frame_duration, loop=loop))
-
-        def update_loop():
-            try:
-                timestamp, image, wait_lock = next(frames_gen)
-                playback_event.fire(image)
-
-                min_wait = 0
-
-                if isinstance(self, LiveSource):
-                    min_wait = frame_duration or 0.0 # 0.0 wait time, as fast as possible updates
-                elif isinstance(self, LocalImages):
-                    min_wait = frame_duration or self.next_frame_interval
-
-                wait_lock(min_wait=min_wait).bind(update_loop)
-            except StopIteration:
-                playback_event.fire(None)
-
-        update_loop()
-
-        return playback_event
 
     @abstractmethod
     def read(self):
@@ -268,7 +223,6 @@ class USBCameraSource(LiveSource):
     def release(self):
         with self.busy:
             super(USBCameraSource, self).release()
-            self.released = True
             self.vc.release()
 
 class LocalImages(RecordedSource):

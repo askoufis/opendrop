@@ -24,11 +24,9 @@ class Coroutine(object):
 
         self.reply = reply
 
-    def close(self, *args, **kwargs):
-        print("waiting to close")
-        with self.lock:
-            print("closing")
-            self.gen.close()
+    # def close(self, *args, **kwargs):
+    #     with self.lock:
+    #         self.gen.close()
 
     def step(self, send_value = None):
         with self.lock:

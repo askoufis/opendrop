@@ -48,7 +48,7 @@ class Pipe(object):
         on_shift_event = PersistentEvent()
 
         waiting_listener = self.get_waiting(target=name)
-
+        
         if waiting_listener:
             waiting_listener.event.fire(v)
             on_shift_event.fire()
