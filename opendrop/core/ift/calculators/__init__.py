@@ -1,2 +1,3 @@
 from needle_diameter import needle_diameter
+from worthington import worthington
 from young_laplace import young_laplace

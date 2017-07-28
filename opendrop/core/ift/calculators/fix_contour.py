@@ -3,8 +3,7 @@
 def fix_contour(contour):
     contour = contour.copy()
 
-    height = contour[:, 1].max()
-    contour[:, 1] = height - contour[:, 1]
+    contour[:, 1] *= -1
 
     contour = contour[contour[:, 1].argsort()]
 

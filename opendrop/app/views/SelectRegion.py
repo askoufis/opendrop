@@ -59,7 +59,7 @@ class SelectRegion(BaseView):
                 self.selector.configure(image=image_tk)
 
                 # tk.Widget.after(delay_ms(int), ...)
-                self.top_level.after(int(hold_for*1000) or 1, self.update_image)
+                self.top_level.after(int(hold_for.time_left*1000) or 1, self.update_image)
             except StopIteration:
                 pass
 
@@ -72,6 +72,7 @@ class SelectRegion(BaseView):
             image_source_fps = None
 
             if isinstance(image_source, source_loader.LocalImages):
+                # TODO: instead of cycling the images, add some kind of onion layer effect thingy
                 image_source_fps = 2
             elif isinstance(image_source, source_loader.USBCameraSource):
                 image_source_fps = -1 # None specifies as fast as possible

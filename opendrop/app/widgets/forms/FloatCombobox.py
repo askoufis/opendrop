@@ -5,7 +5,7 @@ from opendrop.shims import ttk
 
 from opendrop.utility.argfiddler import ExtKwargs
 
-class FloatCombobox(FormWidget, ttk.Combobox):
+class FloatCombobox(ttk.Combobox, FormWidget):
     """
         Combobox with float type options, also allows manual input of a value not in options.
 

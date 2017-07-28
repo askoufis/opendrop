@@ -1,3 +1,9 @@
+import json
+
+from matplotlib import pyplot as plt, ticker
+
+import numpy as np
+
 from opendrop import core
 
 from opendrop.conf import PREFERENCES_FILENAME
@@ -17,10 +23,7 @@ from opendrop.utility.comms import Pipe
 from opendrop.utility import coroutines
 from opendrop.utility import source_loader
 
-import json
-
-import math
-
+# Debug
 from opendrop.utility.vectors import BBox2
 
 OPENDROP_OP_REQUIREMENTS = {
@@ -98,48 +101,46 @@ class App(object):
         image_source_desc = user_input["image_acquisition"]["image_source_desc"]
         image_source_type = user_input["image_acquisition"]["image_source_type"]
 
+        # TODO: Take into account LocalImages interval, right now, 'Wait time' must be 1s for
+        # LocalImages to work
         image_source = source_loader.load(image_source_desc, image_source_type)
 
-        release_resources_on_exit_bind = None
-        def release_resources():
-            release_resources_on_exit_bind.unbind()
-
+        def release_image_source():
             image_source.release()
 
-        release_resources_on_exit_bind = self.on_exit.bind(release_resources)
+        self.on_exit.bind_once(release_image_source)
 
         error = False
-        try:
-            view = yield root.set(views.SelectThreshold, image_source=image_source)
 
-            thresh_vals = yield view.events.on_submit
+        view = yield root.set(views.SelectThreshold, image_source=image_source)
 
-            if thresh_vals:
-                view = yield root.set(views.SelectRegion, image_source=image_source)
+        thresh_vals = yield view.events.on_submit
 
-                num_regions = OPENDROP_OP_REQUIREMENTS[self.context["operation_mode"]]["regions"]
-                regions = []
+        if thresh_vals:
+            view = yield root.set(views.SelectRegion, image_source=image_source)
 
-                for i in range(num_regions):
-                    view.refresh()
+            num_regions = OPENDROP_OP_REQUIREMENTS[self.context["operation_mode"]]["regions"]
+            regions = []
 
-                    region = yield view.events.on_submit
+            for i in range(num_regions):
+                view.refresh()
 
-                    if region:
-                        regions.append(region)
-                    else:
-                        break
+                region = yield view.events.on_submit
 
-                if len(regions) == num_regions:
-                    self.context["threshold_min"] = thresh_vals[0]
-                    self.context["threshold_max"] = thresh_vals[1]
-                    self.context["regions"] = regions
+                if region:
+                    regions.append(region)
                 else:
-                    error = True
+                    break
+
+            if len(regions) == num_regions:
+                self.context["threshold_min"] = thresh_vals[0]
+                self.context["threshold_max"] = thresh_vals[1]
+                self.context["regions"] = regions
+                self.context["image_source_resource"] = image_source
             else:
                 error = True
-        finally:
-            release_resources()
+        else:
+            error = True
 
         if error:
             self.user_input()
@@ -150,6 +151,8 @@ class App(object):
     def opendrop_run(self):
         root = self.view_service.windows["root"]
 
+        view = yield root.set(views.HelloWorld)
+
         user_input = self.context["user_input"]
 
         drop_type = self.context["operation_mode"]
@@ -159,6 +162,8 @@ class App(object):
 
         regions = self.context["regions"]
 
+        image_source = self.context["image_source_resource"]
+
         drop_region = regions[0]
         needle_region = regions[1]
 
@@ -166,8 +171,6 @@ class App(object):
         continuous_density = user_input["physical_inputs"]["density_outer"]
         needle_diameter = user_input["physical_inputs"]["needle_diameter"]
 
-        image_source_desc = user_input["image_acquisition"]["image_source_desc"]
-        image_source_type = user_input["image_acquisition"]["image_source_type"]
         num_frames = user_input["image_acquisition"]["num_frames"]
         frame_time = user_input["image_acquisition"]["wait_time"]
 
@@ -176,41 +179,98 @@ class App(object):
         filename = user_input["save_location"]["filename"] or "Extracted_data" + ".png"
         directory_string = user_input["save_location"]["directory"]
 
-        pipe = Pipe()
+        # pipe = Pipe()
+        #
+        # def handle_pipe(v=None):
+        #     if v is not None:
+        #         if v is Pipe.CLOSED:
+        #             self.exit()
+        #             return
+        #
+        #         print(v)
+        #
+        #     pipe.shift(name="console", blocking=True).bind_once(handle_pipe)
+        #
+        # handle_pipe()
 
-        def handle_pipe(v=None):
-            if v != None:
-                if v == Pipe.CLOSED:
-                    return
+        # core.ift.main(pipe,
+        #     drop_type,
+        #     drop_density,
+        #     continuous_density,
+        #     needle_diameter,
+        #     image_source_desc,
+        #     image_source_type,
+        #     num_frames,
+        #     frame_time,
+        #     save_images_boole,
+        #     create_folder_boole,
+        #     filename,
+        #     directory_string,
+        #     threshold_min,
+        #     threshold_max,
+        #     drop_region,
+        #     needle_region
+        # )
 
-                print(v)
-
-            pipe.shift(name="console", blocking=True).bind_once(handle_pipe)
-
-        handle_pipe()
-
-        core.ift.main(pipe,
+        #('<opendrop.utility.comms.Pipe object at 0x10409c090>', '0', '1000.0', '0.0', '0.7176', '<opendrop.utility.source_loader.LocalImages object at 0x10834a550>', '5', '1', '50', '255', '(282, 194, 751, 723)', '(418, 26, 599, 75)')
+        drop_log = core.ift.main(
             drop_type,
             drop_density,
             continuous_density,
             needle_diameter,
-            image_source_desc,
-            image_source_type,
+            image_source,
             num_frames,
             frame_time,
-            save_images_boole,
-            create_folder_boole,
-            filename,
-            directory_string,
             threshold_min,
             threshold_max,
             drop_region,
             needle_region
         )
 
+        image_source.release()
+
+        self.context["results"] = drop_log
+
         self.show_output()
 
     def show_output(self):
+        drop_log = self.context["results"]
+
+        df = drop_log.output_data()
+
+        print(df.to_string())
+
+        physical_quantities_plot = plt.figure("Physical quantities")
+
+        xlim=(df.index.min(), df.index.max())
+
+        ift_plot = physical_quantities_plot.add_subplot(3, 1, 1,
+            xlabel="Time/s", xlim=xlim,
+            ylabel="Interfacial tension / (mN / m)"
+        )
+
+        volume_plot = physical_quantities_plot.add_subplot(3, 1, 2,
+            xlabel="Time/s", xlim=xlim,
+            ylabel="Volume/"u"\u00B5""L"
+        )
+
+        area_plot = physical_quantities_plot.add_subplot(3, 1, 3,
+            xlabel="Time/s", xlim=xlim,
+            ylabel="Area/mm"u"\u00B2"
+        )
+
+        ift_plot.plot(df.index, df["gamma_ift_mn"], "o-b")
+        ift_plot.yaxis.set_major_locator(ticker.MultipleLocator(2))
+        ift_plot.yaxis.set_minor_locator(ticker.MultipleLocator(1))
+
+        volume_plot.plot(df.index, df["volume"], "o-r")
+
+        area_plot.plot(df.index, df["area"], "o-g")
+        plt.autoscale(True)
+
+        plt.tight_layout()
+
+        plt.show()
 
         self.exit()
 
@@ -247,11 +307,15 @@ class App(object):
         self.on_exit.fire()
 
     def test(self):
-        pipe = core.ift.main(0, 0.0, 0.0, 0.0, ['/Users/Eugene/Documents/GitHub/opendrop/opendrop/test_images/water_in_air.png'], u'Local images', 1, 0, False, False, 'Extracted_data.png', u'', 35.0, 70, BBox2(250, 208, 767, 707), BBox2(369, 61, 646, 135))
+        images = ['/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air001.png', '/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air002.png', '/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air003.png', '/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air004.png', '/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air005.png']
+        image_source = source_loader.load(images[:], "Local images")
+
+        pipe = Pipe()
 
         def handle_pipe(v=None):
-            if v != None:
-                if v == Pipe.CLOSED:
+            if v is not None:
+                if v is Pipe.CLOSED:
+                    image_source.release()
                     return
 
                 print(v)
@@ -260,4 +324,8 @@ class App(object):
 
         handle_pipe()
 
-    entry = main_menu
+        results = core.ift.main(0, 1000.0, 0.0, 0.7176, image_source, 5, 1, 50, 255, BBox2(282, 194, 751, 723), BBox2(418, 26, 599, 75))
+        self.context["results"] = results
+        self.show_output()
+
+    entry = main_menu #test

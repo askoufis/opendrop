@@ -11,7 +11,24 @@ from PIL import Image
 from opendrop.constants import ImageSourceOption
 
 from opendrop.utility.vectors import Vector2
-from opendrop.utility.events import Event, PersistentEvent, WaitLock
+from opendrop.utility.events import Event, PersistentEvent
+
+class WaitUntil(object):
+    def __init__(self, until=None, after=None):
+        self.start = timeit.default_timer()
+
+        if until is not None:
+            self.until = until
+        elif after is not None:
+            self.until = self.start + after
+        else:
+            raise ValueError("either 'until', or 'after' must be specified")
+
+    @property
+    def time_left(self):
+        now = timeit.default_timer()
+        
+        return max(self.until - now, 0)
 
 class Throttler(object):
     """
@@ -57,6 +74,10 @@ class Throttler(object):
 
 class FrameIterator(object):
     def __init__(self, image_source, num_frames=float("inf"), interval=-1, loop=False):
+        # If recorded source, reset the playback head to 0
+        if isinstance(image_source, RecordedSource):
+            image_source.scrub(0)
+
         self.image_source = image_source
 
         self.frames_left = num_frames
@@ -101,16 +122,16 @@ class FrameIterator(object):
                 hold_for = self.interval
 
                 if hold_for is not None:
-                    self.image_source.advance(hold_for, wrap_around=self.loop)
-                else: # Interval not specified, advance by one frame
-                    self.image_source.advance_index(1, wrap_around=self.loop)
+                    self.image_source.skip(hold_for, wrap_around=self.loop)
+                else: # Interval not specified, skip by one frame
+                    self.image_source.skip_index(1, wrap_around=self.loop)
         else:
             hold_for = 0
 
         return_values = (
-            timestamp + self.timestamp_offset,
+            timestamp,
             image,
-            hold_for
+            WaitUntil(after=hold_for)
         )
 
         return return_values
@@ -177,7 +198,7 @@ class RecordedSource(ImageSource):
         self.emulated_time = 0
 
     @abstractmethod
-    def advance(self, by, wrap_around=False): pass
+    def skip(self, by, wrap_around=False): pass
 
     @abstractmethod
     def scrub(self, to, wrap_around=False): pass
@@ -309,10 +330,10 @@ class LocalImages(RecordedSource):
 
         self.emulated_time = t
 
-    def advance(self, by, wrap_around=False):
+    def skip(self, by, wrap_around=False):
         self.set_emulated_time(self.emulated_time + by, wrap_around=wrap_around)
 
-    def advance_index(self, by, wrap_around=False):
+    def skip_index(self, by, wrap_around=False):
         curr_index = self.curr_index
         new_index = curr_index + by
 

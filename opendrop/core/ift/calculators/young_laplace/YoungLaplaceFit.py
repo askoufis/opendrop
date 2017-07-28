@@ -4,6 +4,8 @@ import itertools
 
 from opendrop.core import tolerances
 
+from opendrop.core.ift.calculators.fix_contour import fix_contour
+
 from opendrop.core.ift.calculators.young_laplace import best_guess
 from opendrop.core.ift.calculators.young_laplace import de
 from opendrop.core.ift.calculators.young_laplace import interpolate
@@ -76,6 +78,8 @@ class YoungLaplaceFit(object):
     parameter_dimensions = 5
 
     def __init__(self, contour, progress_callback = None):
+        contour = fix_contour(contour) # Look at fix_contour.py for an explanation
+
         self._profile_size = None
         self._params = None
         self._steps = 200
@@ -183,6 +187,10 @@ class YoungLaplaceFit(object):
     def bond(self):
         return self.get_params()[3]
 
+    @property
+    def apex_radius(self):
+        return self.get_params()[2]
+
     def guess_contour(self, contour):
         [apex_x, apex_y, apex_radius] = best_guess.fit_circle(contour)
 
@@ -192,20 +200,20 @@ class YoungLaplaceFit(object):
 
         self.set_params([apex_x, apex_y, apex_radius, bond_number, omega_rotation])
         # maybe calculate_profile_size() to determine initial range - although current version can handle range being too small
-        self.profile_size = 4.0
+        self.profile_size = 4.0 # ??
 
     def fit_contour(self, contour):
         self.guess_contour(contour) # Intialises parameters to a first best guess
 
         degrees_of_freedom = len(contour) - self.parameter_dimensions + 1
 
-        RHO = 0.25
-        SIGMA = 0.75
+        RHO = 0.25 # ??
+        SIGMA = 0.75 # ??
 
         lmbda = 0  # initialise value of lambda
 
         for step in itertools.count():
-            A, v, s_new, residuals, arc_lengths = self.calculate_A_v_S(contour)
+            A, v, s_new, arc_lengths, residuals = self.calculate_A_v_S(contour)
 
             A_plus_lambdaI = A + lmbda * np.diag(np.diag(A))
 

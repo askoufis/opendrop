@@ -19,6 +19,8 @@ class BaseView(object):
         })
 
         self.body(**passthrough_kwargs)
+        
+        self.top_level.update_idletasks()
 
     def body(self):
         # build the window
@@ -39,6 +41,8 @@ class BaseView(object):
 
         for child in self.top_level.winfo_children():
             child.destroy()
+
+        self.top_level.update_idletasks()
 
         self.alive = False
         self.busy.release()

@@ -133,88 +133,89 @@ class PersistentEvent(Event):
 
         return binding
 
-class WaitLock(PersistentEvent):
-    """
-        WaitLock, can be locked or unlocked, useful for pausing coroutines until necessary
-        conditions.
-
-        Inherits from PersistentEvent, listeners can be bound to WaitLock and will be fired with
-        no arguments when unlocked with .unlock(). When .lock() is called, all listeners are unbind.
-
-        Can also set 'min_wait' which specifies the minimum amount of time in seconds that the
-        WaitLock must stay locked for before unlocking. 'min_wait' can be configured before or after
-        instantiation, e.g.
-
-            wait_lock = WaitLock()
-
-            wait_lock(min_wait=2)
-
-        Will work since the __call__ magic method binds to the class configuration method. Cannot
-        set a 'min_wait' lower than what is currently set.
-    """
-    def __init__(self, **opts):
-        super(WaitLock, self).__init__()
-
-        self.start_time = timeit.default_timer()
-
-        self.min_wait = 0
-        self.future_unlock_timer = None
-
-        self.configure(**opts)
-
-    def configure(self, **opts):
-        if "min_wait" in opts:
-            self.min_wait_update(opts["min_wait"])
-
-        return self
-
-    __call__ = configure
-
-    # Changes the min_wait parameter, will lock if already unlocked and unbind all current listeners
-    def min_wait_update(self, min_wait):
-        if min_wait < self.min_wait:
-            raise ValueError(
-                "Can't set a lower min_wait of {0}, current min_wait is {1}"
-                .format(min_wait, self.min_wait)
-            )
-
-        if not self.is_locked():
-            elapsed_time = timeit.default_timer() - self.start_time
-            if min_wait > elapsed_time:
-                self.lock()
-
-                # Since locking resets the start_time back to 0, set min_wait to be how much time
-                # left is needed to wait
-                self.min_wait = min_wait - elapsed_time
-
-                self.unlock_after(self.min_wait)
-
-        self.min_wait = min_wait
-
-    def is_locked(self):
-        return not self.is_set()
-
-    def lock(self):
-        # Locking unbinds all current listeners
-        self.unbind_all()
-        self.unfire()
-
-        self.start_time = timeit.default_timer()
-
-    def unlock_after(self, time):
-        if self.future_unlock_timer:
-            self.future_unlock_timer.cancel()
-
-        self.future_unlock_timer = threading.Timer(time, lambda: self.unlock())
-        self.future_unlock_timer.start()
-
-    def unlock(self):
-        elapsed_time = timeit.default_timer() - self.start_time
-        if self.is_locked():
-            if elapsed_time > self.min_wait:
-                self.fire()
-            else:
-                self.unlock_after(self.min_wait - elapsed_time)
+# deprecated
+# class WaitLock(PersistentEvent):
+#     """
+#         WaitLock, can be locked or unlocked, useful for pausing coroutines until necessary
+#         conditions.
+#
+#         Inherits from PersistentEvent, listeners can be bound to WaitLock and will be fired with
+#         no arguments when unlocked with .unlock(). When .lock() is called, all listeners are unbind.
+#
+#         Can also set 'min_wait' which specifies the minimum amount of time in seconds that the
+#         WaitLock must stay locked for before unlocking. 'min_wait' can be configured before or after
+#         instantiation, e.g.
+#
+#             wait_lock = WaitLock()
+#
+#             wait_lock(min_wait=2)
+#
+#         Will work since the __call__ magic method binds to the class configuration method. Cannot
+#         set a 'min_wait' lower than what is currently set.
+#     """
+#     def __init__(self, **opts):
+#         super(WaitLock, self).__init__()
+#
+#         self.start_time = timeit.default_timer()
+#
+#         self.min_wait = 0
+#         self.future_unlock_timer = None
+#
+#         self.configure(**opts)
+#
+#     def configure(self, **opts):
+#         if "min_wait" in opts:
+#             self.min_wait_update(opts["min_wait"])
+#
+#         return self
+#
+#     __call__ = configure
+#
+#     # Changes the min_wait parameter, will lock if already unlocked and unbind all current listeners
+#     def min_wait_update(self, min_wait):
+#         if min_wait < self.min_wait:
+#             raise ValueError(
+#                 "Can't set a lower min_wait of {0}, current min_wait is {1}"
+#                 .format(min_wait, self.min_wait)
+#             )
+#
+#         if not self.is_locked():
+#             elapsed_time = timeit.default_timer() - self.start_time
+#             if min_wait > elapsed_time:
+#                 self.lock()
+#
+#                 # Since locking resets the start_time back to 0, set min_wait to be how much time
+#                 # left is needed to wait
+#                 self.min_wait = min_wait - elapsed_time
+#
+#                 self.unlock_after(self.min_wait)
+#
+#         self.min_wait = min_wait
+#
+#     def is_locked(self):
+#         return not self.is_set()
+#
+#     def lock(self):
+#         # Locking unbinds all current listeners
+#         self.unbind_all()
+#         self.unfire()
+#
+#         self.start_time = timeit.default_timer()
+#
+#     def unlock_after(self, time):
+#         if self.future_unlock_timer:
+#             self.future_unlock_timer.cancel()
+#
+#         self.future_unlock_timer = threading.Timer(time, lambda: self.unlock())
+#         self.future_unlock_timer.start()
+#
+#     def unlock(self):
+#         elapsed_time = timeit.default_timer() - self.start_time
+#         if self.is_locked():
+#             if elapsed_time > self.min_wait:
+#                 self.fire()
+#             else:
+#                 self.unlock_after(self.min_wait - elapsed_time)
 
 # basically a defaultdict at the moment, but might add more functionality in the future, used for
 # when an object needs many events or dynamic event names. By default, if no event with specified

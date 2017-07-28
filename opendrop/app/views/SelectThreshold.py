@@ -65,7 +65,7 @@ class SelectThreshold(BaseView):
                 self.update_binarised_image()
 
                 # tk.Widget.after(delay_ms(int), ...)
-                self.top_level.after(int(hold_for*1000) or 1, self.update_base_image)
+                self.top_level.after(int(hold_for.time_left*1000) or 1, self.update_base_image)
             except StopIteration:
                 pass
 

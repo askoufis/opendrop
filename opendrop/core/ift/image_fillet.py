@@ -24,7 +24,7 @@ def prepare(image, drop_region, needle_region, threshold_min, threshold_max=None
 
     image = cv2.Canny(image, threshold_min, threshold_max)
 
-    drop_image = crop(image, drop_region)
     needle_image = crop(image, needle_region)
+    drop_image = crop(image, drop_region)
 
-    return drop_image, needle_image
+    return needle_image, drop_image

@@ -23,21 +23,21 @@ import cv2
 
 import time
 
+from matplotlib import pyplot as plt
+
+# TODO: allow user to input gravity
+GRAVITY = 9.80035 # gravitational acceleration in Melbourne, Australia
+
 IMAGE_EXTENSION = ".png"
 
-def _main(pipe,
+def main(
     drop_type,
     drop_density,
     continuous_density,
     needle_diameter,
-    image_source_desc,
-    image_source_type,
+    image_source,
     num_frames,
     frame_time,
-    save_images_boole,
-    create_folder_boole,
-    filename,
-    directory_string,
     threshold_min,
     threshold_max,
     drop_region,
@@ -47,64 +47,49 @@ def _main(pipe,
                  drop_type == OperationMode.SESSILE and SessileDrop
 
     if drop_class is False:
-        raise ValueError("Unsupported mode: {}".format(mode))
+        raise ValueError("Unsupported mode: {}".format(drop_type))
 
-    drop_logger = DropLogger(drop_class)
+    drop_logger = DropLogger(drop_class, drop_density, continuous_density, needle_diameter, GRAVITY)
 
-    with source_loader.load(image_source_desc, image_source_type) as image_source:
-        for i, (timestamp, image, wait_lock) in zip(range(1, num_frames + 1),
-                                                    image_source.frames(num_frames=num_frames,
-                                                                        interval=frame_time)
-                                                 ):
-            pipe.push("Processing frame {0} of {1}...".format(i, num_frames), name="console")
-            drop_image, needle_image = image_fillet.prepare(image,
-                drop_region,
-                needle_region,
-                threshold_min,
-                threshold_max
-            )
+    for i, (timestamp, image, hold_for) in zip(range(1, num_frames + 1),
+                                                image_source.frames(num_frames=num_frames,
+                                                                    interval=frame_time)
+                                             ):
+        print("Processing frame {0} of {1}... {2}".format(i, num_frames, timestamp))
+        needle_image, drop_image = image_fillet.prepare(image,
+            drop_region,
+            needle_region,
+            threshold_min,
+            threshold_max
+        )
 
-            drop = drop_logger.add_drop_from_image(timestamp, drop_image, needle_image)
+        drop = drop_logger.add_drop_from_image(timestamp, needle_image, drop_image)
 
-            pipe.push(
-                "+------+----------+----------+----------+----------+----------+----------+" "\n" \
-                "| Step |  Error   | x-centre | z-centre | Apex R_0 |   Bond   | w degree |",
-                name="console"
-            )
+        print(
+            "+------+----------+----------+----------+----------+----------+----------+" "\n" \
+            "| Step |  Error   | x-centre | z-centre | Apex R_0 |   Bond   | w degree |"
+        )
 
-            def print_fit_progress(step, objective, params):
-                out = "| {0: >4d} | {1: >8.4f} | {1: >8.4f} | {1: >8.4f} | {1: >8.4f} | {1: >8.5f} " \
-                      "| {1: >8.5f} |"
+        def print_fit_progress(step, objective, params):
+            out = "| {0: >4d} | {1: >8.4f} | {1: >8.4f} | {1: >8.4f} | {1: >8.4f} | {1: >8.5f} " \
+                  "| {1: >8.5f} |"
 
-                x_apex, y_apex, radius_apex, bond_number, omega_rotation = params
+            x_apex, y_apex, radius_apex, bond_number, omega_rotation = params
 
-                out = out.format(step, objective, x_apex, y_apex, radius_apex, bond_number,
-                                 math.degrees(omega_rotation))
+            out = out.format(step, objective, x_apex, y_apex, radius_apex, bond_number,
+                             math.degrees(omega_rotation))
 
-                pipe.push(out, name="console")
+            print(out)
 
-            drop.fit(print_fit_progress)
+        drop.fit(print_fit_progress)
 
-            pipe.push("+------+----------+----------+----------+----------+----------+----------+",
-                      name="console")
+        drop.draw_profile_plot(plt.figure())
 
-            # Can't do yield wait_lock in a coroutine since OpenCV doesn't work on multiple threads
-            # TODO: set up an OpenCV wrapper that wraps OpenCV so that function calls happen on
-            # main thread
-            while (wait_lock.is_locked()):
-                time.sleep(0.01)
+        print("+------+----------+----------+----------+----------+----------+----------+\n")
 
-    # Calculate IFT
+        time.sleep(hold_for.time_left)
 
-    pipe.close()
-
-def main(pipe=None, *conf):
-    pipe = pipe or Pipe()
-
-    # Drop fitting can hold up a thread, run it in new one
-    _main(pipe, *conf)
-
-    return pipe
+    return drop_logger
 
 if __name__ == '__main__':
     raise NotImplementedError #main()
