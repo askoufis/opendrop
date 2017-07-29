@@ -52,10 +52,12 @@ def main(
     drop_logger = DropLogger(drop_class, drop_density, continuous_density, needle_diameter, GRAVITY)
 
     for i, (timestamp, image, hold_for) in zip(range(1, num_frames + 1),
-                                                image_source.frames(num_frames=num_frames,
-                                                                    fps=1.0/frame_time)
-                                             ):
-        print("Processing frame {0} of {1}... {2}".format(i, num_frames, timestamp))
+                                               image_source.frames(num_frames=num_frames,
+                                                                   interval=frame_time)
+                                              ):
+        print(
+            "Processing frame {0} of {1}... (timestamp = {2:.2f}s)".format(i, num_frames, timestamp)
+        )
 
         needle_image, drop_image = image_fillet.prepare(image,
             drop_region,

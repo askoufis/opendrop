@@ -73,21 +73,25 @@ class Throttler(object):
             return self.target_avg_lap_time
 
 class FrameIterator(object):
-    def __init__(self, image_source, num_frames=float("inf"), fps=-1, no_skip=False, loop=False):
+    def __init__(self, image_source, num_frames=float("inf"), fps=-1, loop=False, interval=None):
         if fps == 0:
             raise ValueError("fps cannot equal 0, to specify unthrottled playback, pass fps=-1")
 
         # If recorded source, reset the playback head to 0
         if isinstance(image_source, RecordedSource):
             image_source.scrub(0)
+        elif isinstance(image_source, LiveSource):
+            # If interval is specified on a LiveSource, fps is ignored
+            if interval is not None:
+                fps = 1.0/interval
 
         self.image_source = image_source
 
         self.frames_left = num_frames
         self.fps = fps
-        self.no_skip = no_skip
-
         self.loop = loop
+
+        self.interval = interval
 
         self.first_frame_timestamp = None
 
@@ -111,12 +115,14 @@ class FrameIterator(object):
         # Doesn't do anything for LiveSource images, the passing of time automatically advances the
         # next frame for us
         if isinstance(self.image_source, RecordedSource):
-            timeskip = 1.0/self.fps
+            timeskip = self.interval
 
-            if self.no_skip: # Don't skip frames, just advance by 1 index
-                self.image_source.advance_by(frames=1, wrap_around=self.loop)
-            else:
+            if timeskip:
+                 # Don't just advance by 1 frame, move the playback head forward by 'interval'
+                 # on the virtual timeline
                 self.image_source.advance_by(time=timeskip, wrap_around=self.loop)
+            else:
+                self.image_source.advance_by(frames=1, wrap_around=self.loop)
 
     def __next__(self):
         # Load in the frame
@@ -279,15 +285,15 @@ class LocalImages(RecordedSource):
 
         self.timestamps = timestamps
 
-    @property
-    def next_frame_interval(self):
-        curr_index = self.curr_index
-        if curr_index >= self.num_images - 1 or curr_index < 0:
-            # Currently at last index (or past index range), there is no next frame, or index is
-            # less than 0
-            return 0
-        else:
-            return self.timestamps[curr_index + 1] - self.timestamps[curr_index]
+    # @property
+    # def next_frame_interval(self):
+    #     curr_index = self.curr_index
+    #     if curr_index >= self.num_images - 1 or curr_index < 0:
+    #         # Currently at last index (or past index range), there is no next frame, or index is
+    #         # less than 0
+    #         return 0
+    #     else:
+    #         return self.timestamps[curr_index + 1] - self.timestamps[curr_index]
 
     @property
     def curr_index(self):
@@ -333,7 +339,6 @@ class LocalImages(RecordedSource):
             image = Image.open(filename)
             return timestamp, image
         except IndexError:
-            self.release()
             return None, None
 
     def set_emulated_time(self, t, wrap_around=False):
@@ -348,11 +353,11 @@ class LocalImages(RecordedSource):
     def advance_by(self, time=None, wrap_around=False, frames=None):
         if time is not None:
             self.advance_by_time(time, wrap_around=wrap_around)
-        elif index is not None:
+        elif frames is not None:
             self.advance_by_frames(frames, wrap_around=wrap_around)
         else:
             raise ValueError(
-                "Must specify either 'time' or 'index' to advance by"
+                "Must specify either 'time' or 'frames' to advance by"
             )
 
     def advance_by_time(self, by, wrap_around=False):

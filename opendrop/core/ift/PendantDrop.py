@@ -78,7 +78,9 @@ class PendantDrop(object):
         # EPS = .000001 # need to use Bessel function Taylor expansion below
         x_vec_initial = [.000001, 0., 0., 0., 0.]
 
-        vol_sur = integrate.odeint(de.dataderiv, x_vec_initial, s_data_points, args=(bond_number,))[-1,-2:]
+        vol_sur = integrate.odeint(
+            de.dataderiv, x_vec_initial, s_data_points, args=(bond_number,)
+        )[-1,-2:]
 
         vol_sur *= [self.pixel_to_mm**3, self.pixel_to_mm**2]
 
@@ -103,8 +105,12 @@ class PendantDrop(object):
 
         s_points = self.drop_fit.steps
 
-        [profile_line_left] = profile_subplot.plot(np.zeros(s_points+1), np.zeros(s_points+1), "--r", linewidth = 2.0)
-        [profile_line_right] = profile_subplot.plot(np.zeros(s_points+1), np.zeros(s_points+1), "--r", linewidth = 2.0)
+        [profile_line_left] = profile_subplot.plot(
+            np.zeros(s_points+1), np.zeros(s_points+1), "--r", linewidth = 2.0
+        )
+        [profile_line_right] = profile_subplot.plot(
+            np.zeros(s_points+1), np.zeros(s_points+1), "--r", linewidth = 2.0
+        )
 
         x_apex, y_apex, radius_apex, bond_number, omega_rotation = self.drop_fit.get_params()
 
@@ -135,9 +141,9 @@ class PendantDrop(object):
         profile_left = np.dot(profile, reflect_rotation_matrix)
         profile_right = np.dot(profile, rotation_matrix)
 
-        drop_x_left = x_apex + radius_apex * profile_left[:, 0]
         # Need to +height because messy reasons to do with the axis of the data points from
         # YoungLaplaceFit
+        drop_x_left = x_apex + radius_apex * profile_left[:, 0]
         drop_y_left = y_apex + radius_apex * profile_left[:, 1] + height
 
         drop_x_right = x_apex + radius_apex * profile_right[:, 0]

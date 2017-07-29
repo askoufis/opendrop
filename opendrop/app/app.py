@@ -8,7 +8,7 @@ from opendrop import core
 
 from opendrop.conf import PREFERENCES_FILENAME
 
-from opendrop.constants import OperationMode
+from opendrop.constants import ImageSourceOption, OperationMode
 
 from opendrop.utility.events import Event, PersistentEvent
 
@@ -100,10 +100,14 @@ class App(object):
 
         image_source_desc = user_input["image_acquisition"]["image_source_desc"]
         image_source_type = user_input["image_acquisition"]["image_source_type"]
+        image_source_frame_time = user_input["image_acquisition"]["wait_time"]
 
-        # TODO: Take into account LocalImages interval, right now, 'Wait time' must be 1s for
-        # LocalImages to work
-        image_source = source_loader.load(image_source_desc, image_source_type)
+
+        if image_source_type == ImageSourceOption.LOCAL_IMAGES:
+            image_source = source_loader.load(image_source_desc, image_source_type,
+                                              interval=image_source_frame_time)
+        else:
+            image_source = source_loader.load(image_source_desc, image_source_type)
 
         def release_image_source():
             image_source.release()
@@ -151,7 +155,7 @@ class App(object):
     def opendrop_run(self):
         root = self.view_service.windows["root"]
 
-        view = yield root.set(views.HelloWorld)
+        view = yield root.set(views.Placeholder, text="Fitting...")
 
         user_input = self.context["user_input"]
 
@@ -233,7 +237,12 @@ class App(object):
 
         self.show_output()
 
+    @coroutines.co
     def show_output(self):
+        root = self.view_service.windows["root"]
+
+        view = yield root.set(views.Placeholder, text="Results")
+
         drop_log = self.context["results"]
 
         df = drop_log.output_data()
@@ -245,18 +254,18 @@ class App(object):
         xlim=(df.index.min(), df.index.max())
 
         ift_plot = physical_quantities_plot.add_subplot(3, 1, 1,
-            xlabel="Time/s", xlim=xlim,
-            ylabel="Interfacial tension / (mN / m)"
+            xlabel="Time (s)", xlim=xlim,
+            ylabel="Interfacial tension (mN/m)"
         )
 
         volume_plot = physical_quantities_plot.add_subplot(3, 1, 2,
-            xlabel="Time/s", xlim=xlim,
-            ylabel="Volume/"u"\u00B5""L"
+            xlabel="Time (s)", xlim=xlim,
+            ylabel="Volume ("u"\u00B5""L)"
         )
 
         area_plot = physical_quantities_plot.add_subplot(3, 1, 3,
-            xlabel="Time/s", xlim=xlim,
-            ylabel="Area/mm"u"\u00B2"
+            xlabel="Time (s)", xlim=xlim,
+            ylabel="Area (mm"u"\u00B2"")"
         )
 
         ift_plot.plot(df.index, df["gamma_ift_mn"], "o-b")
@@ -266,7 +275,6 @@ class App(object):
         volume_plot.plot(df.index, df["volume"], "o-r")
 
         area_plot.plot(df.index, df["area"], "o-g")
-        plt.autoscale(True)
 
         plt.tight_layout()
 

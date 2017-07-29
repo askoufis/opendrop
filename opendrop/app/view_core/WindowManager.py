@@ -25,6 +25,8 @@ class WindowManager(object):
 
         self.top_level.title(new_view.TITLE)
 
+        self.top_level.update_idletasks()
+
         self.current_view = new_view
 
         self.on_view_change.fire(new_view)
@@ -38,6 +40,8 @@ class WindowManager(object):
             # Wait until view is cleared
             yield self.current_view.core_events.on_clear
 
+        self.top_level.update_idletasks()
+
         self.current_view = None
 
         if not silent:
@@ -47,6 +51,8 @@ class WindowManager(object):
 
     def reset(self):
         self.top_level.configure(padx=0, pady=0)
+        
+        self.top_level.update_idletasks()
 
     @property
     def screen_resolution(self):
