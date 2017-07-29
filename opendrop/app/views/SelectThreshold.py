@@ -170,8 +170,7 @@ class SelectThreshold(BaseView):
         self.threshold_slider_max.on_change.bind(lambda widget, val: self.update_binarised_image())
         self.threshold_slider_min.on_change.bind(lambda widget, val: self.update_binarised_image())
 
-        self.image_source_frames = iter(self.image_source.frames(interval=1.0/image_source_fps,
-                                                                 loop=True))
+        self.image_source_frames = iter(self.image_source.frames(fps=image_source_fps, loop=True))
         self.update_base_image()
 
     # def _clear(self):

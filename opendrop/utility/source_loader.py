@@ -27,7 +27,7 @@ class WaitUntil(object):
     @property
     def time_left(self):
         now = timeit.default_timer()
-        
+
         return max(self.until - now, 0)
 
 class Throttler(object):
@@ -73,7 +73,10 @@ class Throttler(object):
             return self.target_avg_lap_time
 
 class FrameIterator(object):
-    def __init__(self, image_source, num_frames=float("inf"), interval=-1, loop=False):
+    def __init__(self, image_source, num_frames=float("inf"), fps=-1, no_skip=False, loop=False):
+        if fps == 0:
+            raise ValueError("fps cannot equal 0, to specify unthrottled playback, pass fps=-1")
+
         # If recorded source, reset the playback head to 0
         if isinstance(image_source, RecordedSource):
             image_source.scrub(0)
@@ -81,50 +84,59 @@ class FrameIterator(object):
         self.image_source = image_source
 
         self.frames_left = num_frames
-        self.interval = interval
+        self.fps = fps
+        self.no_skip = no_skip
+
         self.loop = loop
 
-        self.timestamp_offset = None
+        self.first_frame_timestamp = None
 
-        self.throttler = interval != -1 and Throttler(interval)
+        self.throttler = fps != -1 and Throttler(1.0/fps)
 
-    def __iter__(self):
-        return self
-
-    def __next__(self):
+    def read_frame(self):
         if self.frames_left > 0:
             timestamp, image = self.image_source.read()
 
-            if timestamp is None and image is None:
-                raise StopIteration
+            if not (timestamp is None or image is None):
+                if self.first_frame_timestamp is None:
+                    # Store the first frame's timestamp so subsequent frame timestamps are returned
+                    # relative to the first frame.
+                    self.first_frame_timestamp = timestamp
 
-            if self.timestamp_offset is None:
-                # timestamp_offset is used so the first image timestamp is 0, and subsequent
-                # timestamps are relative to the first image
-                self.timestamp_offset = -timestamp
+                return timestamp - self.first_frame_timestamp, image
 
-            timestamp += self.timestamp_offset
+        return None, None
 
-            if self.frames_left: self.frames_left -= 1
-        else:
+    def advance_to_next_frame(self):
+        # Doesn't do anything for LiveSource images, the passing of time automatically advances the
+        # next frame for us
+        if isinstance(self.image_source, RecordedSource):
+            timeskip = 1.0/self.fps
+
+            if self.no_skip: # Don't skip frames, just advance by 1 index
+                self.image_source.advance_by(frames=1, wrap_around=self.loop)
+            else:
+                self.image_source.advance_by(time=timeskip, wrap_around=self.loop)
+
+    def __next__(self):
+        # Load in the frame
+        timestamp, image = self.read_frame()
+
+        self.frames_left -= 1
+
+        if timestamp is None or image is None:
             raise StopIteration
 
         if self.frames_left > 0:
-            if isinstance(self.image_source, LiveSource):
-                hold_for = self.throttler and self.throttler.lap() or 0
+            self.advance_to_next_frame()
 
-                if hold_for < 0:
-                    print(
-                        "[WARNING] Iterator not keeping up with specified interval ({:.2f}s behind)"
-                        .format(-hold_for)
-                    )
-            elif isinstance(self.image_source, RecordedSource):
-                hold_for = self.interval
+            hold_for = self.throttler and self.throttler.lap() or 0
 
-                if hold_for is not None:
-                    self.image_source.skip(hold_for, wrap_around=self.loop)
-                else: # Interval not specified, skip by one frame
-                    self.image_source.skip_index(1, wrap_around=self.loop)
+            if hold_for < 0:
+                print(
+                    "[WARNING] Iterator not keeping up with specified interval ({:.2f}s behind)"
+                    .format(-hold_for)
+                )
         else:
             hold_for = 0
 
@@ -138,6 +150,9 @@ class FrameIterator(object):
 
     # For Python2 support
     next = __next__
+
+    def __iter__(self):
+        return self
 
 class FrameIterable(object):
     def __init__(self, image_source, **opts):
@@ -198,7 +213,7 @@ class RecordedSource(ImageSource):
         self.emulated_time = 0
 
     @abstractmethod
-    def skip(self, by, wrap_around=False): pass
+    def advance_by(self, time=None, wrap_around=False, frames=None): pass
 
     @abstractmethod
     def scrub(self, to, wrap_around=False): pass
@@ -330,10 +345,20 @@ class LocalImages(RecordedSource):
 
         self.emulated_time = t
 
-    def skip(self, by, wrap_around=False):
+    def advance_by(self, time=None, wrap_around=False, frames=None):
+        if time is not None:
+            self.advance_by_time(time, wrap_around=wrap_around)
+        elif index is not None:
+            self.advance_by_frames(frames, wrap_around=wrap_around)
+        else:
+            raise ValueError(
+                "Must specify either 'time' or 'index' to advance by"
+            )
+
+    def advance_by_time(self, by, wrap_around=False):
         self.set_emulated_time(self.emulated_time + by, wrap_around=wrap_around)
 
-    def skip_index(self, by, wrap_around=False):
+    def advance_by_frames(self, by, wrap_around=False):
         curr_index = self.curr_index
         new_index = curr_index + by
 

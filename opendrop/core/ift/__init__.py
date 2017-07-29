@@ -53,9 +53,10 @@ def main(
 
     for i, (timestamp, image, hold_for) in zip(range(1, num_frames + 1),
                                                 image_source.frames(num_frames=num_frames,
-                                                                    interval=frame_time)
+                                                                    fps=1.0/frame_time)
                                              ):
         print("Processing frame {0} of {1}... {2}".format(i, num_frames, timestamp))
+
         needle_image, drop_image = image_fillet.prepare(image,
             drop_region,
             needle_region,
@@ -83,6 +84,7 @@ def main(
 
         drop.fit(print_fit_progress)
 
+        # Debug
         drop.draw_profile_plot(plt.figure())
 
         print("+------+----------+----------+----------+----------+----------+----------+\n")

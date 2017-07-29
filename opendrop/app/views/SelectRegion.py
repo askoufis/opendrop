@@ -108,8 +108,7 @@ class SelectRegion(BaseView):
 
         # Background tasks
 
-        self.image_source_frames = iter(self.image_source.frames(interval=1.0/image_source_fps,
-                                                                 loop=True))
+        self.image_source_frames = iter(self.image_source.frames(fps=image_source_fps, loop=True))
         self.update_image()
 
     # def _clear(self):
