@@ -27,6 +27,6 @@ class TextEntry(tk.Entry, FormWidget):
         options = ExtKwargs(options)
         options.alias({"background":"bg"})
 
-        entry_options = options.extract("font", "width", "background") \
+        entry_options = options.extract("justify", "font", "width", "background") \
                                .rename({"background": "highlightbackground"})
         self.configure_(**entry_options)

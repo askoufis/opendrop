@@ -51,7 +51,7 @@ class FormWidget(object):
             else:
                 child.value = v
 
-    # TODO: AUTO DETECT VALUE TYPE AND DO STUFF, change 'on_change' to .change
+    # TODO: AUTO DETECT VALUE TYPE AND DO STUFF
     @property
     def value(self):
         if hasattr(self, "_value"):

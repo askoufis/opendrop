@@ -79,6 +79,7 @@ class YoungLaplaceFit(object):
 
     def __init__(self, contour, progress_callback = None):
         contour = fix_contour(contour) # Look at fix_contour.py for an explanation
+        self.base_contour = contour
 
         self._profile_size = None
         self._params = None
@@ -190,6 +191,10 @@ class YoungLaplaceFit(object):
     @property
     def apex_radius(self):
         return self.get_params()[2]
+
+    @property
+    def apex_x(self):
+        return self.get_params()[0]
 
     def guess_contour(self, contour):
         [apex_x, apex_y, apex_radius] = best_guess.fit_circle(contour)

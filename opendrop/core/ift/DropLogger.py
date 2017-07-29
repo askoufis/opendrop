@@ -15,10 +15,10 @@ class DropLogger(object):
         # Gravity
         self.gravity = gravity
 
-        self.drops = {}
+        self.drops = pd.Series()
 
     def _add_drop(self, timestamp, drop):
-        self.drops[timestamp] = drop
+        self.drops.loc[timestamp] = drop
 
     def add_drop_from_image(self, timestamp, needle_image, drop_image):
         new_drop = self.drop_class(needle_image, self.needle_diameter_measured_mm,
@@ -34,7 +34,7 @@ class DropLogger(object):
         index = []
         data = {column: [] for column in columns}
 
-        for timestamp, drop in self.drops.items():
+        for timestamp, drop in self.drops.iteritems():
             if not drop.fitted:
                 print(
                     "[WARNING] drop (timestamp={}s) not fitted, ommitting from output"

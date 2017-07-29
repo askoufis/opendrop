@@ -87,7 +87,7 @@ def main(
         drop.fit(print_fit_progress)
 
         # Debug
-        drop.draw_profile_plot(plt.figure())
+        # drop.draw_profile_plot(plt.figure())
 
         print("+------+----------+----------+----------+----------+----------+----------+\n")
 

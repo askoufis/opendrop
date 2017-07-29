@@ -1,4 +1,4 @@
-from matplotlib import pyplot as plt
+from matplotlib import gridspec
 
 import numpy as np
 
@@ -9,6 +9,8 @@ from opendrop.core.ift.calculators.young_laplace import de
 from opendrop.utility import comvis
 
 from scipy import integrate
+
+from six.moves import zip
 
 # TODO: allow to enter gravity
 GRAVITY = 9.80035 # gravitational acceleration in Melbourne, Australia
@@ -87,9 +89,13 @@ class PendantDrop(object):
         return vol_sur * [apex_radius_px**3, apex_radius_px**2]
 
     def draw_profile_plot(self, figure):
-        plt.figure(figure.number)
+        gs = gridspec.GridSpec(1, 2)
 
-        profile_subplot = figure.add_subplot(1,1,1)
+        profile_subplot = figure.add_subplot(gs[0])
+        residual_subplot = figure.add_subplot(gs[1])
+
+        profile_subplot.set_title("Profile")
+        residual_subplot.set_title("Residuals")
 
         height, width = self.drop_image.shape[:2]
 
@@ -100,17 +106,17 @@ class PendantDrop(object):
 
         # Need to flip the image up-down since on the plot, +y is made upwards (by origin="lower")
         # where in the image, +y is downwards
-        plt.imshow(np.flipud(self.drop_image), origin='lower', cmap="gray", extent=extent)
-        plt.axis(extent, aspect=1)
+        profile_subplot.imshow(np.flipud(self.drop_image), origin='lower', cmap="gray", extent=extent, aspect="equal")
+        # profile_subplot.axis(extent) #, aspect=1)
 
         s_points = self.drop_fit.steps
 
-        [profile_line_left] = profile_subplot.plot(
+        profile_line_left = profile_subplot.plot(
             np.zeros(s_points+1), np.zeros(s_points+1), "--r", linewidth = 2.0
-        )
-        [profile_line_right] = profile_subplot.plot(
+        )[0]
+        profile_line_right = profile_subplot.plot(
             np.zeros(s_points+1), np.zeros(s_points+1), "--r", linewidth = 2.0
-        )
+        )[0]
 
         x_apex, y_apex, radius_apex, bond_number, omega_rotation = self.drop_fit.get_params()
 
@@ -160,7 +166,11 @@ class PendantDrop(object):
         profile_line_right.set_xdata(drop_x_right)
         profile_line_right.set_ydata(drop_y_right)
 
-        figure.canvas.draw()
+        # Make reisudal plot
+        apex_x = self.drop_fit.apex_x
 
-        # Debug
-        # plt.show()
+        x_data = np.copysign(self.drop_fit.arc_lengths, self.drop_fit.base_contour[:, 0] - apex_x)
+
+        residual_data = residual_subplot.plot(x_data, self.drop_fit.residuals, "bo")[0]
+
+        residual_data.axes.autoscale_view(True,True,True)

@@ -4,6 +4,7 @@ widgets = [
     "FormWidget",
     "Frame",
     "OptionMenu",
+    "PageNavigator",
     "LabelFrame",
     "DirectoryEntry",
     "TextEntry",

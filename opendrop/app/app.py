@@ -1,5 +1,6 @@
 import json
 
+import matplotlib as mpl
 from matplotlib import pyplot as plt, ticker
 
 import numpy as np
@@ -239,48 +240,59 @@ class App(object):
 
     @coroutines.co
     def show_output(self):
-        root = self.view_service.windows["root"]
-
-        view = yield root.set(views.Placeholder, text="Results")
-
         drop_log = self.context["results"]
 
         df = drop_log.output_data()
 
-        print(df.to_string())
+        # print(df.to_string())
 
-        physical_quantities_plot = plt.figure("Physical quantities")
+        physical_quants_fig = mpl.figure.Figure(
+            figsize=(7, 5), tight_layout={"w_pad":0.2, "h_pad":0.2}
+        )
 
-        xlim=(df.index.min(), df.index.max())
+        # When just 1 data point, set x-max to 1 instead of x min = 0, x-max = 0
+        xlim=(df.index.min(), max(df.index.max(), 1))
 
-        ift_plot = physical_quantities_plot.add_subplot(3, 1, 1,
+        ift_plot = physical_quants_fig.add_subplot(3, 1, 1,
             xlabel="Time (s)", xlim=xlim,
             ylabel="Interfacial tension (mN/m)"
         )
 
-        volume_plot = physical_quantities_plot.add_subplot(3, 1, 2,
+        volume_plot = physical_quants_fig.add_subplot(3, 1, 2,
             xlabel="Time (s)", xlim=xlim,
             ylabel="Volume ("u"\u00B5""L)"
         )
 
-        area_plot = physical_quantities_plot.add_subplot(3, 1, 3,
+        area_plot = physical_quants_fig.add_subplot(3, 1, 3,
             xlabel="Time (s)", xlim=xlim,
             ylabel="Area (mm"u"\u00B2"")"
         )
 
         ift_plot.plot(df.index, df["gamma_ift_mn"], "o-b")
-        ift_plot.yaxis.set_major_locator(ticker.MultipleLocator(2))
-        ift_plot.yaxis.set_minor_locator(ticker.MultipleLocator(1))
+        # ift_plot.yaxis.set_major_locator(ticker.MultipleLocator(2))
+        # ift_plot.yaxis.set_minor_locator(ticker.MultipleLocator(1))
 
         volume_plot.plot(df.index, df["volume"], "o-r")
 
         area_plot.plot(df.index, df["area"], "o-g")
 
-        plt.tight_layout()
+        drop_fit_figs = []
 
-        plt.show()
+        for drop in drop_log.drops.values:
+            drop_fit_fig = mpl.figure.Figure(tight_layout=True)
 
-        self.exit()
+            drop.draw_profile_plot(drop_fit_fig)
+
+            drop_fit_figs.append(drop_fit_fig)
+
+        root = self.view_service.windows["root"]
+
+        view = yield root.set(views.OpendropResults,
+            physical_quants_fig=physical_quants_fig,
+            drop_fit_figs=drop_fit_figs
+        )
+
+        #self.exit()
 
 
     def make_preferences(self, form_data):
@@ -316,7 +328,7 @@ class App(object):
 
     def test(self):
         images = ['/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air001.png', '/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air002.png', '/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air003.png', '/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air004.png', '/Users/Eugene/Documents/GitHub/opendrop/opendrop/sequence/water_in_air005.png']
-        image_source = source_loader.load(images[:], "Local images")
+        image_source = source_loader.load(images[:5], "Local images")
 
         pipe = Pipe()
 
@@ -336,4 +348,11 @@ class App(object):
         self.context["results"] = results
         self.show_output()
 
-    entry = main_menu #test
+    def test2(self):
+        root = self.view_service.windows["root"]
+
+        view = yield root.set(views.OpendropResults, physical_quants_fig=physical_quants_fig)
+
+        #self.exit()
+
+    entry = main_menu #test #main_menu #test
