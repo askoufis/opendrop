@@ -1,6 +1,7 @@
 import math
 
 from numpy import sin, cos
+from math import sin, cos, pi
 
 # minimise calls to sin() and cos()
 # defines the Young--Laplace system of differential equations to be solved
@@ -24,6 +25,6 @@ def dataderiv(x_vec, t, bond_number):
     y_s = sin(phi)
     phi_s = 2 - bond_number * y - sin(phi)/x
     vol_s = math.pi * x**2 * y_s
-    sur_s = 2 * math.pi * x
+    sur_s = 2 * pi * x
 
     return [x_s, y_s, phi_s, vol_s, sur_s]
