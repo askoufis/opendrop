@@ -1,6 +1,5 @@
 import math
 
-from numpy import sin, cos
 from math import sin, cos, pi
 
 # minimise calls to sin() and cos()

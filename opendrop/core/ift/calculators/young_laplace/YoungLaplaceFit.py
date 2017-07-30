@@ -12,7 +12,6 @@ from opendrop.core.ift.calculators.young_laplace import interpolate
 
 import math
 
-from numpy import cos, sin
 from math import cos, sin
 
 import numpy as np
