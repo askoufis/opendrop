@@ -1,8 +1,16 @@
 from math import sin, cos, pi
 
+import numpy as np
+
 # minimise calls to sin() and cos()
 # defines the Young--Laplace system of differential equations to be solved
+# x_vec can be an array of vectors, in which case, ylderiv will calculate the derivative for each
+# row in a for loop and return an np.ndarray of of the derivatives
 def ylderiv(x_vec, t, bond_number):
+    if isinstance(x_vec, np.ndarray):
+        if len(x_vec.shape) == 2:
+            return np.array([ylderiv(v) for v in x_vec])
+
     x, y, phi, x_Bond, y_Bond, phi_Bond = x_vec
 
     x_s = cos(phi)
