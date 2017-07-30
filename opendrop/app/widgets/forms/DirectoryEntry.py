@@ -33,7 +33,6 @@ class DirectoryEntry(tk.Frame, FormWidget):
         self.configure(**options)
 
         self.value = value
-        print(self.value)
 
     def _configuration_dump(self):
         return self.entry.configure() # Not fully implemented
