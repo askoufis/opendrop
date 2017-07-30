@@ -1,5 +1,3 @@
-from matplotlib import gridspec
-
 import numpy as np
 
 from opendrop.core.ift import calculators
@@ -89,10 +87,8 @@ class PendantDrop(object):
         return vol_sur * [apex_radius_px**3, apex_radius_px**2]
 
     def draw_profile_plot(self, figure):
-        gs = gridspec.GridSpec(1, 2)
-
-        profile_subplot = figure.add_subplot(gs[0])
-        residual_subplot = figure.add_subplot(gs[1])
+        profile_subplot = figure.add_subplot(1, 2, 1)
+        residual_subplot = figure.add_subplot(1, 2, 2)
 
         profile_subplot.set_title("Profile")
         residual_subplot.set_title("Residuals")
