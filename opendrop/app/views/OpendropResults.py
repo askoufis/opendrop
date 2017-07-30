@@ -1,8 +1,9 @@
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
 from opendrop.app.view_core import BaseView
 
 from opendrop.app import widgets
+
+from opendrop.shims import matplotlib_preloader as mpl_pl
+mpl_pl.include("backends.backend_tkagg")
 
 from opendrop.shims import tkinter as tk
 from opendrop.shims import ttk
@@ -11,6 +12,9 @@ class OpendropResults(BaseView):
     TITLE = "Results"
 
     def body(self, physical_quants_fig, drop_fit_figs):
+        mpl = mpl_pl.ready()
+        FigureCanvasTkAgg = mpl.backends.backend_tkagg.FigureCanvasTkAgg
+
         top_level = self.top_level
 
         top_level.geometry("650x550")
