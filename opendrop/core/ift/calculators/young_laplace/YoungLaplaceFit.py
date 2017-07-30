@@ -16,7 +16,7 @@ from math import cos, sin
 
 import numpy as np
 
-from scipy import integrate
+from scipy import integrate, interpolate as sp_interpolate
 
 FITTING_STOP = namedtuple("FITTING_STOP", [
     "CONVERGENCE_IN_PARAMETERS",
@@ -85,6 +85,8 @@ class YoungLaplaceFit(object):
         self._params = None
         self._steps = 200
 
+        self._apex_rot_matrix = None
+
         self.theoretical_data = None
 
         self.arc_lengths = None
@@ -108,24 +110,26 @@ class YoungLaplaceFit(object):
             # if the profile is called outside of the current region, expand it by 20% (why 20% ??)
             self.profile_size = 1.2 * s
 
-        step_size = self.profile_size / self.steps
+        return self.theoretical_data_spline(s)
 
-        n1 = int(s / step_size)
-        n2 = n1 + 1
-
-        t = s / step_size - n1
-
-        vec1 = np.array(self.theoretical_data[n1])
-        vec2 = np.array(self.theoretical_data[n2])
-
-        bond_number = self.bond
-
-        dvec1 = np.array(de.ylderiv(vec1, 0, bond_number))
-        dvec2 = np.array(de.ylderiv(vec2, 0, bond_number))
-
-        value = interpolate.cubic_spline(vec1, vec2, dvec1, dvec2, step_size, t)
-
-        return value
+        # step_size = self.profile_size / self.steps
+        #
+        # n1 = int(s / step_size)
+        # n2 = n1 + 1
+        #
+        # t = s / step_size - n1
+        #
+        # vec1 = np.array(self.theoretical_data[n1])
+        # vec2 = np.array(self.theoretical_data[n2])
+        #
+        # bond_number = self.bond
+        #
+        # dvec1 = np.array(de.ylderiv(vec1, 0, bond_number))
+        # dvec2 = np.array(de.ylderiv(vec2, 0, bond_number))
+        #
+        # value = interpolate.cubic_spline(vec1, vec2, dvec1, dvec2, step_size, t)
+        #
+        # return value
 
     # generates a new drop profile
     def update_profile(self):
@@ -137,6 +141,15 @@ class YoungLaplaceFit(object):
 
             self.theoretical_data = integrate.odeint(de.ylderiv, x_vec_initial, s_data_points,
                                                            args=(self.bond,))
+
+            bc = ( # Boundary conditions for the spline
+                (1, de.ylderiv(self.theoretical_data[0], 0, self.bond)),
+                (1, de.ylderiv(self.theoretical_data[-1], 0, self.bond))
+            )
+
+            self.theoretical_data_spline = sp_interpolate.CubicSpline(
+                s_data_points, self.theoretical_data, bc_type=bc
+            )
         else:
             self.theoretical_data = None
 
@@ -151,6 +164,7 @@ class YoungLaplaceFit(object):
             )
 
         self._params = new_params
+        self.update_apex_rot_matrix() # update wP rotation matrix
 
         self.update_profile() # generate new profile when the parameters are changed
 
@@ -185,16 +199,44 @@ class YoungLaplaceFit(object):
         self.update_profile() # generate new profile when the maximum arc length is changed
 
     @property
-    def bond(self):
-        return self.get_params()[3]
+    def apex_x(self):
+        return self.get_params()[0]
+
+    @property
+    def apex_y(self):
+        return self.get_params()[1]
 
     @property
     def apex_radius(self):
         return self.get_params()[2]
 
     @property
-    def apex_x(self):
-        return self.get_params()[0]
+    def bond(self):
+        return self.get_params()[3]
+
+    @property
+    def apex_rot(self):
+        return self.get_params()[4]
+
+    @property
+    def apex_rot_matrix(self):
+        return self._apex_rot_matrix
+
+    def update_apex_rot_matrix(self):
+        wP = self.apex_rot
+
+        wP_matrix = np.array([
+            [cos(wP), -sin(wP)],
+            [sin(wP),  cos(wP)]
+        ])
+
+        self._apex_rot_matrix = wP_matrix
+
+    def from_xy_to_rz(self, x, y):
+        return np.dot(self.apex_rot_matrix, [x, y])
+
+    def from_rz_to_xy(self, r, z):
+        return np.dot(self.apex_rot_matrix.T, [r, z])
 
     def guess_contour(self, contour):
         [apex_x, apex_y, apex_radius] = best_guess.fit_circle(contour)
@@ -292,6 +334,7 @@ class YoungLaplaceFit(object):
             # Since 'v' is a column array, can't just do v += jac_row_i * residual_vector[i]
             v[:, 0] += jac_row_i * residual
 
+            # ?? what operation does this do
             for j in range(0, num_parameters):
                 for k in range(0, j+1):
                     A[j][k] += jac_row_i[j] * jac_row_i[k]
@@ -305,41 +348,44 @@ class YoungLaplaceFit(object):
     def row_jacobian(self, x, y, s_left, s_right):
         [xP, yP, RP, BP, wP] = self.get_params()
 
-        if ((x - xP) * cos(wP) - (y - yP) * sin(wP)) < 0:
+        r, z = self.from_xy_to_rz(x - xP, y - yP)
+
+        if r < 0:
             s_0 = s_left
         else:
             s_0 = s_right
 
-        xs, ys, dx_dBs, dy_dBs, e_r, e_z, s_i = self.minimum_arclength(x, y, s_0) # functions at s*
+        xs, ys, dx_dBs, dy_dBs, e_r, e_z, s_i = self.minimum_arclength(r, z, s_0) # functions at s*
 
         next_s_left = s_left
         next_s_right = s_right
 
-        if ((x - xP) * cos(wP) - (y - yP) * sin(wP)) < 0:
+        if r < 0:
             next_s_left = s_i
         else:
             next_s_right = s_i
 
-        e_i = math.copysign(math.sqrt(e_r**2 + e_z**2), e_r)              # actual residual
-        sgnx = math.copysign(1, ((x - xP) * cos(wP) - (y - yP) * sin(wP))) # calculates the sign for ddi_dX0
-        ddi_dxP = -( e_r * sgnx * cos(wP) + e_z * sin(wP) ) / e_i             # derivative w.r.t. X_0 (x at apex)
-        ddi_dyP = -(-e_r * sgnx * sin(wP) + e_z * cos(wP) ) / e_i                    # derivative w.r.t. Y_0 (y at apex)
+        e_i = math.copysign(math.hypot(e_r, e_z), e_r)              # actual residual
+
+        sgnx = math.copysign(1, r) # calculates the sign for ddi_dX0
+
+        ddi_dxP, ddi_dyP = -self.from_rz_to_xy(sgnx * e_r, e_z) / e_i
+
+        # ddi_dxP = -( e_r * sgnx * cos(wP) + e_z * sin(wP) ) / e_i             # derivative w.r.t. X_0 (x at apex)
+        # ddi_dyP = -(-e_r * sgnx * sin(wP) + e_z * cos(wP) ) / e_i                    # derivative w.r.t. Y_0 (y at apex)
+
         ddi_dRP = -( e_r * xs + e_z * ys) / e_i  # derivative w.r.t. RP (apex radius)
+
         ddi_dBP = - RP * (e_r * dx_dBs + e_z * dy_dBs) / e_i   # derivative w.r.t. Bo  (Bond number)
-        ddi_dwP = (e_r * sgnx * (- (x - xP) * sin(wP) - (y - yP) * cos(wP)) + e_z * ( (x - xP) * cos(wP) - (y - yP) * sin(wP))) / e_i
+
+        ddi_dwP = (e_r * sgnx * -z + e_z * r) / e_i
+        # ddi_dwP = (e_r * sgnx * (- (x - xP) * sin(wP) - (y - yP) * cos(wP)) + e_z * ( (x - xP) * cos(wP) - (y - yP) * sin(wP))) / e_i
 
         return np.array([ ddi_dxP, ddi_dyP, ddi_dRP, ddi_dBP, ddi_dwP]), next_s_left, next_s_right, s_i, e_i
 
-    # calculates the minimum theoretical point to the point (x,y)
-    def minimum_arclength(self, x, y, s_i):
+    # calculates the minimum theoretical point to the point (r,z)
+    def minimum_arclength(self, r, z, s_i):
         [xP, yP, RP, BP, wP] = self.get_params() # unpack parameters
-
-        wP_nrot = np.array([
-            [cos(wP), -sin(wP)],
-            [sin(wP),  cos(wP)]
-        ])
-
-        r, z = np.dot(wP_nrot, [x - xP, y - yP])
 
         r = abs(r)
 
