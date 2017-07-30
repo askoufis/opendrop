@@ -13,7 +13,7 @@ def ylderiv(x_vec, t, bond_number):
     phi_s = 2 - bond_number * y - y_s/x
     x_Bond_s = - y_s * phi_Bond
     y_Bond_s = x_s * phi_Bond
-    phi_Bond_s = y_s * x_Bond / (x*x) - x_s * phi_Bond / x - y - bond_number * y_Bond
+    phi_Bond_s = y_s * x_Bond / (x**2) - x_s * phi_Bond / x - y - bond_number * y_Bond
 
     return [x_s, y_s, phi_s, x_Bond_s, y_Bond_s, phi_Bond_s]
 
