@@ -335,19 +335,31 @@ class YoungLaplaceFit(object):
     def minimum_arclength(self, x, y, s_i):
         [xP, yP, RP, BP, wP] = self.get_params() # unpack parameters
 
+        wP_nrot = np.array([
+            [cos(wP), -sin(wP)],
+            [sin(wP),  cos(wP)]
+        ])
+
+        r, z = np.dot(wP_nrot, [x - xP, y - yP])
+
+        r = abs(r)
+
         flag_bump = 0
         # f_i = 10000 # need to give this a more sensible value
         for step in itertools.count():
-            xs, ys, phis, dx_dBs, dy_dBs, dphi_dBs = self.profile(s_i)
+            xs, ys, phi_s, dx_dBs, dy_dBs, dphi_dBs = self.profile(s_i)
 
-            e_r = abs((x - xP) * cos(wP) - (y - yP) * sin(wP)) - RP * xs
-            e_z =    ((x - xP) * sin(wP) + (y - yP) * cos(wP)) - RP * ys
+            e_r = r - RP * xs
+            e_z = z - RP * ys
 
-            dphi_ds = 2 - BP * ys - sin(phis) / xs
+            #e_r = abs((x - xP) * cos(wP) - (y - yP) * sin(wP)) - RP * xs
+            #e_z =    ((x - xP) * sin(wP) + (y - yP) * cos(wP)) - RP * ys
 
-            s_next = s_i - f_Newton(e_r, e_z, phis, dphi_ds, RP)
+            dphi_ds = 2 - BP * ys - sin(phi_s) / xs
 
-            #f_iplus1 = RP * (e_r * cos(phis) + e_z * sin(phis))
+            s_next = s_i - f_Newton(e_r, e_z, phi_s, dphi_ds, RP)
+
+            #f_iplus1 = RP * (e_r * cos(phi_s) + e_z * sin(phi_s))
 
             if s_next < 0: # arc length outside integrated region
                 s_next = 0
