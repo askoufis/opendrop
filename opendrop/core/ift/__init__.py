@@ -23,8 +23,6 @@ import cv2
 
 import time
 
-from matplotlib import pyplot as plt
-
 # TODO: allow user to input gravity
 GRAVITY = 9.80035 # gravitational acceleration in Melbourne, Australia
 
@@ -85,9 +83,6 @@ def main(
             print(out)
 
         drop.fit(print_fit_progress)
-
-        # Debug
-        # drop.draw_profile_plot(plt.figure())
 
         print("+------+----------+----------+----------+----------+----------+----------+\n")
 

@@ -350,13 +350,7 @@ class App(object):
 
         results = core.ift.main(0, 1000.0, 0.0, 0.7176, image_source, 5, 1, 50, 255, BBox2(282, 194, 751, 723), BBox2(418, 26, 599, 75))
         self.context["results"] = results
-        self.show_output()
-
-    def test2(self):
-        root = self.view_service.windows["root"]
-
-        view = yield root.set(views.OpendropResults, physical_quants_fig=physical_quants_fig)
-
         #self.exit()
+        self.show_output()
 
     entry = main_menu #test #main_menu #test
