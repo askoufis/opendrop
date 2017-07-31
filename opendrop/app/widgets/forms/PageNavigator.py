@@ -22,8 +22,8 @@ class PageNavigator(tk.Frame, FormWidget):
         self._value = tk.IntVar()
         self._bind_var(self._value)
 
-        self.left = tk.Button(self, text="<", command=self.go_back, width=2)
-        self.right = tk.Button(self, text=">", command=self.go_next, width=2)
+        self.left = ttk.Button(self, text="<", command=self.go_back, width=2)
+        self.right = ttk.Button(self, text=">", command=self.go_next, width=2)
 
         self.text_frame = tk.Frame(self, padx=10)
 
