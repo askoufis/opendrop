@@ -44,8 +44,11 @@ class SelectThreshold(BaseView):
     TITLE = "Canny edge detection"
 
     def submit(self):
-        thresh_min = self.threshold_slider_min.value
         thresh_max = self.threshold_slider_max.value
+
+        thresh_min_percent = self.threshold_slider_min.value
+
+        thresh_min = int(float(thresh_min_percent)/100 * thresh_max)
 
         self.events.on_submit.fire(thresh_min, thresh_max)
 
