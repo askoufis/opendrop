@@ -102,7 +102,8 @@ class PendantDrop(object):
 
         # Need to flip the image up-down since on the plot, +y is made upwards (by origin="lower")
         # where in the image, +y is downwards
-        profile_subplot.imshow(np.flipud(self.drop_image), origin='lower', cmap="gray", extent=extent, aspect="equal")
+        profile_subplot.imshow(np.flipud(self.drop_image), origin='lower', cmap="gray",
+                               extent=extent, aspect="equal")
         # profile_subplot.axis(extent) #, aspect=1)
 
         s_points = self.drop_fit.steps
