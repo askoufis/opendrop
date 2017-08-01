@@ -1,5 +1,8 @@
 import json
 
+import matplotlib as mpl
+from matplotlib import ticker
+
 import numpy as np
 
 from opendrop import core
@@ -15,9 +18,6 @@ from opendrop.app import views
 from opendrop.app.view_core import ViewService
 
 from opendrop.app.view_core.devtools.view_hook import view_hook
-
-from opendrop.shims import matplotlib_preloader as mpl_pl
-mpl_pl.include("ticker")
 
 from opendrop.utility.comms import Pipe
 
@@ -246,9 +246,6 @@ class App(object):
 
     @coroutines.co
     def show_output(self):
-        mpl = mpl_pl.ready()
-        ticker = mpl.ticker
-
         drop_log = self.context["results"]
 
         df = drop_log.output_data()

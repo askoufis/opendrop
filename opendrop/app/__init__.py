@@ -1,6 +1,7 @@
-from opendrop.app.app import App
+import matplotlib
+matplotlib.use("TkAgg")
 
-from opendrop.shims import matplotlib_preloader
+from opendrop.app.app import App
 
 def main():
     app = App()
