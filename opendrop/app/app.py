@@ -104,7 +104,6 @@ class App(object):
         image_source_type = user_input["image_acquisition"]["image_source_type"]
         image_source_frame_time = user_input["image_acquisition"]["wait_time"]
 
-
         if image_source_type == ImageSourceOption.LOCAL_IMAGES:
             image_source = source_loader.load(image_source_desc, image_source_type,
                                               interval=image_source_frame_time)
@@ -112,7 +111,12 @@ class App(object):
             image_source = source_loader.load(image_source_desc, image_source_type)
 
         def release_image_source():
-            image_source.release()
+            if release_image_source.image_source_released is False:
+                image_source.release()
+
+                release_image_source.image_source_released = True
+
+        release_image_source.image_source_released = False
 
         self.on_exit.bind_once(release_image_source)
 
@@ -149,6 +153,7 @@ class App(object):
             error = True
 
         if error:
+            release_image_source()
             self.user_input()
         else:
             self.opendrop_run()
