@@ -83,7 +83,7 @@ class YoungLaplaceFit(object):
 
         self._profile_size = None
         self._params = None
-        self._steps = 200
+        self._steps = 5000
 
         self._apex_rot_matrix = None
 
