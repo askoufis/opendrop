@@ -63,26 +63,15 @@ class SelectRegion(BaseView):
         top_level = self.top_level
 
         with self.busy:
-            self.image_source = image_source
-
-            image_source_fps = None
-
-            if isinstance(image_source, source_loader.LocalImages):
-                # TODO: instead of cycling the images, add some kind of onion layer effect thingy
-                image_source_fps = 2
-            elif isinstance(image_source, source_loader.USBCameraSource):
-                image_source_fps = -1 # None specifies as fast as possible
-
             screen_res = self.window_manager.screen_resolution
-            image_source_size = self.image_source.size
 
             self.scale = scale_from_bounds(
-                image_size=image_source_size,
+                image_size=image_source.size,
                 max_size=REL_SIZE_MAX * screen_res,
                 min_size=REL_SIZE_MIN * screen_res
             )
 
-            self.resize_to = (image_source_size * self.scale).round_to_int()
+            self.resize_to = (image_source.size * self.scale).round_to_int()
 
             # Widgets
 
@@ -102,7 +91,17 @@ class SelectRegion(BaseView):
 
         top_level.bind("<Escape>", lambda e: self.cancel())
 
-        # Background tasks
+        # Preview image update background tasks
+
+        self.image_source = image_source
+
+        image_source_fps = None
+
+        if isinstance(image_source, source_loader.LocalImages):
+            # TODO: instead of cycling the images, add some kind of onion layer effect thingy
+            image_source_fps = 2
+        elif isinstance(image_source, source_loader.USBCameraSource):
+            image_source_fps = -1 # None specifies as fast as possible
 
         self.image_source_frames = iter(self.image_source.frames(fps=image_source_fps, loop=True))
         self.update_image()

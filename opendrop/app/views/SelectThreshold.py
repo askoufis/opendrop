@@ -117,27 +117,18 @@ class SelectThreshold(BaseView):
         top_level = self.top_level
 
         with self.busy:
-            self.image_source = image_source
-
-            self.default_threshold_val = comvis.otsu_threshold_val(image_source.read()[1])
-
-            image_source_fps = None
-
-            if isinstance(image_source, source_loader.LocalImages):
-                image_source_fps = 2
-            elif isinstance(image_source, source_loader.USBCameraSource):
-                image_source_fps = -1 # -1 specifies as fast as possible
+            default_thresh_max = comvis.otsu_threshold_val(image_source.read()[1])
+            default_thresh_min = 50 # 50 as in 50%
 
             screen_res = self.window_manager.screen_resolution
-            image_source_size = self.image_source.size
 
             self.scale = scale_from_bounds(
-                image_size=image_source_size,
+                image_size=image_source.size,
                 max_size=REL_SIZE_MAX * screen_res,
                 min_size=REL_SIZE_MIN * screen_res
             )
 
-            self.resize_to = (image_source_size * self.scale).round_to_int()
+            self.resize_to = (image_source.size * self.scale).round_to_int()
 
             # Widgets
             self.image_label = widgets.Label(top_level, width=self.resize_to.x, height=self.resize_to.y)
@@ -152,7 +143,7 @@ class SelectThreshold(BaseView):
             self.threshold_slider_max = widgets.forms.Scale(threshold_slider_frame,
                 from_=0,
                 to=255,
-                value=self.default_threshold_val
+                value=default_thresh_max
             )
             self.threshold_slider_max.grid(row=0, column=1, sticky="we")
 
@@ -161,7 +152,7 @@ class SelectThreshold(BaseView):
             self.threshold_slider_min = widgets.forms.Scale(threshold_slider_frame,
                 from_=0,
                 to=100,
-                value=50
+                value=default_thresh_min
             )
             self.threshold_slider_min.grid(row=1, column=1, sticky="we")
 
@@ -184,6 +175,17 @@ class SelectThreshold(BaseView):
 
         self.threshold_slider_max.on_change.bind(lambda widget, val: self.update_binarised_image())
         self.threshold_slider_min.on_change.bind(lambda widget, val: self.update_binarised_image())
+
+        # Preview image update background tasks
+
+        self.image_source = image_source
+
+        image_source_fps = None
+
+        if isinstance(image_source, source_loader.LocalImages):
+            image_source_fps = 2
+        elif isinstance(image_source, source_loader.USBCameraSource):
+            image_source_fps = -1 # -1 specifies as fast as possible
 
         self.image_source_frames = iter(self.image_source.frames(fps=image_source_fps, loop=True))
         self.update_base_image()
