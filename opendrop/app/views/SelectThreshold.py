@@ -102,8 +102,6 @@ class SelectThreshold(BaseView):
                     image_arr = image_arr.astype(int) + image_edges_arr.astype(int)
                     image_arr = image_arr.clip(0, 255).astype(np.uint8)
 
-                    print(image_arr.dtype, image_edges_arr)
-
                     image_tk = ImageTk.PhotoImage(Image.fromarray(image_arr))
 
                     self.image_label.configure(image=image_tk)
