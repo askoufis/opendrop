@@ -232,10 +232,10 @@ class YoungLaplaceFit(object):
 
         self._apex_rot_matrix = wP_matrix
 
-    def from_xy_to_rz(self, x, y):
+    def rz_from_xy(self, x, y):
         return np.dot(self.apex_rot_matrix, [x, y])
 
-    def from_rz_to_xy(self, r, z):
+    def xy_from_rz(self, r, z):
         return np.dot(self.apex_rot_matrix.T, [r, z])
 
     def guess_contour(self, contour):
@@ -348,7 +348,7 @@ class YoungLaplaceFit(object):
     def row_jacobian(self, x, y, s_left, s_right):
         [xP, yP, RP, BP, wP] = self.get_params()
 
-        r, z = self.from_xy_to_rz(x - xP, y - yP)
+        r, z = self.rz_from_xy(x - xP, y - yP)
 
         if r < 0:
             s_0 = s_left
@@ -369,7 +369,7 @@ class YoungLaplaceFit(object):
 
         sgnx = math.copysign(1, r) # calculates the sign for ddi_dX0
 
-        ddi_dxP, ddi_dyP = -self.from_rz_to_xy(sgnx * e_r, e_z) / e_i
+        ddi_dxP, ddi_dyP = -self.xy_from_rz(sgnx * e_r, e_z) / e_i
 
         # ddi_dxP = -( e_r * sgnx * cos(wP) + e_z * sin(wP) ) / e_i             # derivative w.r.t. X_0 (x at apex)
         # ddi_dyP = -(-e_r * sgnx * sin(wP) + e_z * cos(wP) ) / e_i                    # derivative w.r.t. Y_0 (y at apex)
