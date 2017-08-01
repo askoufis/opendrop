@@ -52,10 +52,6 @@ class SelectRegion(BaseView):
                 resized_image = image.resize(self.resize_to, resample=Image.BILINEAR)
                 image_tk = ImageTk.PhotoImage(resized_image)
 
-                # Not entirely sure if this part is necessary
-                image.close()
-                resized_image.close()
-
                 self.selector.configure(image=image_tk)
 
                 # tk.Widget.after(delay_ms(int), ...)

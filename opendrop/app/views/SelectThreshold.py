@@ -61,7 +61,6 @@ class SelectThreshold(BaseView):
                 timestamp, image, hold_for = next(self.image_source_frames)
 
                 image_gray = image.convert("L")
-                image.close()
 
                 self.base_image = image_gray
 
