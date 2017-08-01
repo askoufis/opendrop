@@ -337,6 +337,9 @@ class LocalImages(RecordedSource):
             filename = self.filenames[self.curr_index]
 
             image = Image.open(filename)
+
+            image.load()
+
             return timestamp, image
         except IndexError:
             return None, None
