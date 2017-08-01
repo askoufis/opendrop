@@ -60,9 +60,7 @@ class SelectThreshold(BaseView):
             try:
                 timestamp, image, hold_for = next(self.image_source_frames)
 
-                image_gray = image.convert("L")
-
-                self.base_image = image_gray
+                self.base_image = image
 
                 self.update_binarised_image()
 
@@ -82,14 +80,31 @@ class SelectThreshold(BaseView):
         if lock_acquired:
             if self.base_image:
                 try:
-                    resized_image = self.base_image.resize(self.resize_to, resample=Image.BILINEAR)
-                    image_array = np.array(resized_image)
-
                     thresh_max = self.threshold_slider_max.value
                     thresh_min = float(self.threshold_slider_min.value)/100 * thresh_max
 
-                    image_array = cv2.Canny(image_array, thresh_min, thresh_max)
-                    image_tk = ImageTk.PhotoImage(Image.fromarray(image_array))
+                    image = self.base_image.resize(self.resize_to, resample=Image.BILINEAR)
+                    image = image.convert("RGB")
+                    image_edges = image.convert("L")
+
+                    image_arr = np.array(image)
+                    image_edges_arr = np.array(image_edges)
+
+                    image_edges_arr = cv2.Canny(image_edges_arr, thresh_min, thresh_max)
+
+                    image_edges_arr = cv2.cvtColor(image_edges_arr, cv2.COLOR_GRAY2RGB)
+
+                    # clear the green and blue channels to make the image "redscale"
+                    image_edges_arr[:, :, [1, 2]] = 0
+
+                    # blend image_edges_arr on top of image_arr in an additive manner
+                    # first convert to int before adding to prevent overflow of uint8
+                    image_arr = image_arr.astype(int) + image_edges_arr.astype(int)
+                    image_arr = image_arr.clip(0, 255).astype(np.uint8)
+
+                    print(image_arr.dtype, image_edges_arr)
+
+                    image_tk = ImageTk.PhotoImage(Image.fromarray(image_arr))
 
                     self.image_label.configure(image=image_tk)
                     self.image_label.image = image_tk
