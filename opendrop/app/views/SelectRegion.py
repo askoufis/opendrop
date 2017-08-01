@@ -1,3 +1,5 @@
+import numpy as np
+
 from opendrop.constants import ImageSourceOption, MOUSE_BUTTON_R
 
 from opendrop.app import widgets
@@ -9,6 +11,7 @@ from opendrop.resources import resources
 from opendrop.shims import tkinter as tk
 
 from opendrop.utility import coroutines
+from opendrop.utility import image_tools
 from opendrop.utility import source_loader
 from opendrop.utility.vectors import Vector2, BBox2
 
@@ -44,20 +47,25 @@ class SelectRegion(BaseView):
     def cancel(self):
         self.events.on_submit.fire(None)
 
-    def update_image(self):
+    def update_image_loop(self, frames_gen):
         if self.alive:
             try:
-                timestamp, image, hold_for = next(self.image_source_frames)
+                timestamp, image, hold_for = next(frames_gen)
 
-                resized_image = image.resize(self.resize_to, resample=Image.BILINEAR)
-                image_tk = ImageTk.PhotoImage(resized_image)
+                self.update_image(image)
 
-                self.selector.configure(image=image_tk)
-
-                # tk.Widget.after(delay_ms(int), ...)
-                self.top_level.after(int(hold_for.time_left*1000) or 1, self.update_image)
+                self.top_level.after(int(hold_for.time_left*1000) or 1,
+                    self.update_image_loop, frames
+                )
             except StopIteration:
                 pass
+
+    def update_image(self, image):
+        image = image.resize(self.resize_to, resample=Image.BILINEAR)
+
+        image_tk = ImageTk.PhotoImage(image)
+
+        self.selector.configure(image=image_tk)
 
     def body(self, image_source): #image_source_desc, image_source_type):
         top_level = self.top_level
@@ -93,18 +101,17 @@ class SelectRegion(BaseView):
 
         # Preview image update background tasks
 
-        self.image_source = image_source
-
-        image_source_fps = None
-
         if isinstance(image_source, source_loader.LocalImages):
-            # TODO: instead of cycling the images, add some kind of onion layer effect thingy
-            image_source_fps = 2
-        elif isinstance(image_source, source_loader.USBCameraSource):
-            image_source_fps = -1 # None specifies as fast as possible
+            onionskin = image_tools.onionskin(np.array(im) for t, im, w in image_source.frames())
 
-        self.image_source_frames = iter(self.image_source.frames(fps=image_source_fps, loop=True))
-        self.update_image()
+            onionskin = Image.fromarray(onionskin)
+
+            self.update_image(onionskin)
+        elif isinstance(image_source, source_loader.USBCameraSource):
+            # fps=-1 specifies as fast as possible playback
+            frames_gen = iter(image_source.frames(fps=-1, loop=True))
+
+            self.update_image_loop(frames_gen)
 
     # def _clear(self):
     #     self.image_source.release()

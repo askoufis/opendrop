@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 
 from opendrop.constants import ImageSourceOption, MOUSE_BUTTON_R
@@ -13,6 +12,7 @@ from opendrop.shims import tkinter as tk
 
 from opendrop.utility import coroutines
 from opendrop.utility import comvis
+from opendrop.utility import image_tools
 from opendrop.utility import source_loader
 
 from opendrop.utility.vectors import Vector2
@@ -53,17 +53,19 @@ class SelectThreshold(BaseView):
     def cancel(self):
         self.events.on_submit.fire(None)
 
-    def update_base_image(self):
+    def update_base_image_loop(self, frames_gen):
         if self.alive:
             try:
-                timestamp, image, hold_for = next(self.image_source_frames)
+                timestamp, image, hold_for = next(frames_gen)
 
                 self.base_image = image
 
                 self.update_binarised_image()
 
                 # tk.Widget.after(delay_ms(int), ...)
-                self.top_level.after(int(hold_for.time_left*1000) or 1, self.update_base_image)
+                self.top_level.after(int(hold_for.time_left*1000) or 1,
+                    self.update_base_image_loop, frames_gen
+                )
             except StopIteration:
                 pass
 
@@ -82,25 +84,12 @@ class SelectThreshold(BaseView):
                     thresh_min = float(self.threshold_slider_min.value)/100 * thresh_max
 
                     image = self.base_image.resize(self.resize_to, resample=Image.BILINEAR)
-                    image = image.convert("RGB")
-                    image_edges = image.convert("L")
 
-                    image_arr = np.array(image)
-                    image_edges_arr = np.array(image_edges)
+                    blend = image_tools.highlight_edges(
+                        np.array(image), thresh_max, thresh_min, (255, 0, 0)
+                    )
 
-                    image_edges_arr = cv2.Canny(image_edges_arr, thresh_min, thresh_max)
-
-                    image_edges_arr = cv2.cvtColor(image_edges_arr, cv2.COLOR_GRAY2RGB)
-
-                    # clear the green and blue channels to make the image "redscale"
-                    image_edges_arr[:, :, [1, 2]] = 0
-
-                    # blend image_edges_arr on top of image_arr in an additive manner
-                    # first convert to int before adding to prevent overflow of uint8
-                    image_arr = image_arr.astype(int) + image_edges_arr.astype(int)
-                    image_arr = image_arr.clip(0, 255).astype(np.uint8)
-
-                    image_tk = ImageTk.PhotoImage(Image.fromarray(image_arr))
+                    image_tk = ImageTk.PhotoImage(Image.fromarray(blend))
 
                     self.image_label.configure(image=image_tk)
                     self.image_label.image = image_tk
@@ -176,8 +165,6 @@ class SelectThreshold(BaseView):
 
         # Preview image update background tasks
 
-        self.image_source = image_source
-
         image_source_fps = None
 
         if isinstance(image_source, source_loader.LocalImages):
@@ -185,8 +172,8 @@ class SelectThreshold(BaseView):
         elif isinstance(image_source, source_loader.USBCameraSource):
             image_source_fps = -1 # -1 specifies as fast as possible
 
-        self.image_source_frames = iter(self.image_source.frames(fps=image_source_fps, loop=True))
-        self.update_base_image()
+        frames_gen = iter(image_source.frames(fps=image_source_fps, loop=True))
+        self.update_base_image_loop(frames_gen)
 
     # def _clear(self):
     #     self.cancel()
