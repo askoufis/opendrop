@@ -25,7 +25,7 @@ class WindowManager(object):
 
         self.top_level.title(new_view.TITLE)
 
-        self.top_level.update_idletasks()
+        self.top_level.update()
 
         self.current_view = new_view
 
