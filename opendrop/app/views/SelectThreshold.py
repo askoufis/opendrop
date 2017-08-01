@@ -1,5 +1,3 @@
-# TODO: change to select canny instead of threshold
-
 import cv2
 import numpy as np
 
