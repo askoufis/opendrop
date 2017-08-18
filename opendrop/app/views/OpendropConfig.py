@@ -64,8 +64,12 @@ class OpendropConfig(BaseView):
     def image_source_change(self, self_, val):
         if val == "Local images":
             self.save_images_checkbutton.disable()
-        elif self.save_images_checkbutton.state == "disabled":
-            self.save_images_checkbutton.normal()
+            self.constant_volume_checkbutton.disable()
+        else:
+            if self.save_images_checkbutton.state == "disabled":
+                self.save_images_checkbutton.normal()
+            if self.constant_volume_checkbutton.state == "disabled":
+                self.constant_volume_checkbutton.normal()
 
     def submit(self):
         if self.image_source_type.value == ImageSourceOption.LOCAL_IMAGES:
@@ -109,7 +113,7 @@ class OpendropConfig(BaseView):
     def body(self):
         top_level = self.top_level
 
-        top_level.geometry("650x550")
+        top_level.geometry("700x650")
 
         top_level.configure(background = BACKGROUND_COLOR, padx = 50)
 
@@ -168,6 +172,13 @@ class OpendropConfig(BaseView):
             values = NEEDLE_OPTIONS,
             name = "needle_diameter"
         ).grid(row = 2, column = 1, sticky = "we")
+
+        self.constant_volume_checkbutton = widgets.forms.Checkbutton(physical_frame,
+            text = "Keep drop volume constant",
+            name = "constant_volume_boole"
+        )
+
+        self.constant_volume_checkbutton.grid(row = 3, column = 0, pady = 2, sticky = "w")
 
         # #-------- Threshold value FloatEntry
         #
