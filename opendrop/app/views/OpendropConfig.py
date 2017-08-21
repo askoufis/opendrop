@@ -175,7 +175,7 @@ class OpendropConfig(BaseView):
 
         self.constant_volume_checkbutton = widgets.forms.Checkbutton(physical_frame,
             text = "Keep drop volume constant",
-            name = "constant_volume_boole"
+            name = "constant_volume"
         )
 
         self.constant_volume_checkbutton.grid(row = 3, column = 0, pady = 2, sticky = "w")

@@ -181,6 +181,7 @@ class App(object):
         drop_density = user_input["physical_inputs"]["density_inner"]
         continuous_density = user_input["physical_inputs"]["density_outer"]
         needle_diameter = user_input["physical_inputs"]["needle_diameter"]
+        constant_volume_boole = user_input["physical_inputs"]["constant_volume"]
 
         num_frames = user_input["image_acquisition"]["num_frames"]
         frame_time = user_input["image_acquisition"]["wait_time"]
