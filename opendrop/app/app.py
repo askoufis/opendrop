@@ -230,6 +230,7 @@ class App(object):
             drop_density,
             continuous_density,
             needle_diameter,
+            constant_volume_boole,
             image_source,
             num_frames,
             frame_time,

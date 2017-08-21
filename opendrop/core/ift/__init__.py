@@ -33,6 +33,7 @@ def main(
     drop_density,
     continuous_density,
     needle_diameter,
+    constant_volume,
     image_source,
     num_frames,
     frame_time,
@@ -48,6 +49,10 @@ def main(
         raise ValueError("Unsupported mode: {}".format(drop_type))
 
     drop_logger = DropLogger(drop_class, drop_density, continuous_density, needle_diameter, GRAVITY)
+
+    # Only used when constant_volume is true
+    previous_volume = 0
+    current_volume = 0
 
     for i, (timestamp, image, hold_for) in zip(range(1, num_frames + 1),
                                                image_source.frames(num_frames=num_frames,
@@ -85,6 +90,42 @@ def main(
         drop.fit(print_fit_progress)
 
         print("+------+----------+----------+----------+----------+----------+----------+\n")
+
+        if constant_volume:
+            # Probably want to take user input for this
+            # Threshold is in micro litres
+            threshold = 0.01
+            # Volume is in micro litres
+            volume = drop.calculate_volume_and_area()[0]
+            print("Drop volume for frame {0} is {1:01.6f} uL.".format(i, volume))
+
+            # Update both current and previous volume on the first frame
+            if (i == 1):
+                previous_volume = volume
+                current_volume = volume
+            else:
+                current_volume = volume
+
+            volume_difference = current_volume - previous_volume
+
+            if abs(volume_difference) > threshold:
+                # Volume has increased
+                if volume_difference > 0:
+                    pump_direction = "withdraw"
+
+                # Volume has decreased
+                elif volume_difference < 0:
+                    pump_direction = "infuse"
+
+                # We want the volume adjustment to take place in half the
+                # frame time so we have some leeway
+                # Rate is in micro litres per minute
+                rate = 60 * (abs(volume) / (frame_time* 0.5))
+                units = "MM"
+
+                # pump.setDiameter(2)
+                # pump.setDirection(pump_direction)
+                # pump.setRate(rate, units)
 
         time.sleep(hold_for.time_left)
 
