@@ -8,6 +8,7 @@ from opendrop.core import tolerances
 
 from opendrop.utility import coroutines
 from opendrop.utility import source_loader
+from opendrop.utility import syringe_pump
 
 from opendrop.core.ift import image_fillet
 
@@ -16,6 +17,8 @@ from opendrop.core.ift.PendantDrop import PendantDrop
 from opendrop.core.ift.SessileDrop import SessileDrop
 
 from opendrop.utility.comms import Pipe
+
+from serial import SerialException
 
 from six.moves import zip
 
@@ -53,6 +56,12 @@ def main(
     # Only used when constant_volume is true
     previous_volume = 0
     current_volume = 0
+
+    pump = None
+    if constant_volume:
+        pump = syringe_pump.SyringePump("/dev/ttyUSB0")
+        pump.setDiameter(10)
+        pump.setAccumUnits("UL")
 
     for i, (timestamp, image, hold_for) in zip(range(1, num_frames + 1),
                                                image_source.frames(num_frames=num_frames,
@@ -109,6 +118,8 @@ def main(
             volume_difference = current_volume - previous_volume
 
             if abs(volume_difference) > threshold:
+                print("Difference between current drop volume and initial is {0} uL.".format(volume_difference))
+
                 # Volume has increased
                 if volume_difference > 0:
                     pump_direction = "withdraw"
@@ -123,9 +134,13 @@ def main(
                 rate = 60 * (abs(volume) / (frame_time* 0.5))
                 units = "MM"
 
-                # pump.setDiameter(2)
-                # pump.setDirection(pump_direction)
-                # pump.setRate(rate, units)
+                pump.setVolumeToDispense(volume_difference)
+
+                # Diameter is specified in mm. We want user input for this.
+                pump.setDirection(pump_direction)
+                pump.setRate(rate, units)
+
+                pump.run()
 
         time.sleep(hold_for.time_left)
 
