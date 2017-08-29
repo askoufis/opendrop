@@ -6,6 +6,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.pyc
+opendrop/
 
 # C extensions
 *.so
