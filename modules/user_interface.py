@@ -64,11 +64,11 @@ class UserInterface(tk.Toplevel):
         self.create_homepage_url()
 
         self.import_parameters()
-        
 
-        
+
+
         self.initialise = False # need this to setup entry widgets validation
-        
+
         self.root.mainloop()
 
     def create_title(self):
@@ -86,6 +86,7 @@ class UserInterface(tk.Toplevel):
         self.density_inner = FloatEntryStyle(self, physical_frame, "Drop density (kg/m"u"\u00b3""):", rw=0, width_specify=ENTRY_WIDTH) #, label_width=LABEL_WIDTH)
         self.density_outer = FloatEntryStyle(self, physical_frame, "Continuous density (kg/m"u"\u00b3""):", rw=1) #, label_width=LABEL_WIDTH)
         self.needle_diameter = FloatComboboxStyle(self, physical_frame, "Needle diameter (mm):", NEEDLE_OPTIONS, rw=2) #, label_width=LABEL_WIDTH)
+        self.constant_volume_boole = CheckButtonStyle(self, physical_frame, "Constant volume", rw=3)
 
         physical_frame.grid_columnconfigure(0, minsize=LABEL_WIDTH)
 
@@ -107,17 +108,17 @@ class UserInterface(tk.Toplevel):
         image_acquisition_frame.grid_columnconfigure(2, weight=1)
 
         self.image_source = OptionMenuStyle(self, image_acquisition_frame, "Image source:", IMAGE_SOURCE_OPTIONS, rw=0, label_width=12) #(LABEL_WIDTH-ENTRY_WIDTH))
-        
+
         # self.number_frames = IntegerEntryStyle(self, image_acquisition_frame, "Number of frames:", rw=0, cl=3, pdx=10)
         # self.wait_time = IntegerEntryStyle(self, image_acquisition_frame, "Wait time (s):", rw=1, cl=3, pdx=10)
 
         # self.directory = DirectoryEntryStyle(self.root, self.save_info_frame, "Location:", rw=3, entry_width=50)
- 
+
         # image_acquisition_frame.grid_columnconfigure(3, minsize=LABEL_WIDTH)
         # self.image_source.text_variable.trace_variable('w',self.propogate_state)
         self.image_source.text_variable.trace_variable('w',self.propogate_state)
 
-        
+
 
         self.number_frames = IntegerEntryStyle(self, image_acquisition_frame, "Number of frames:", rw=3, cl=0, pdx=10)
         self.wait_time = IntegerEntryStyle(self, image_acquisition_frame, "Wait time (s):", rw=4, cl=0, pdx=10)
@@ -132,11 +133,13 @@ class UserInterface(tk.Toplevel):
         if self.image_source.get_value()=="Local images":
             self.save_images_boole.disable()
             self.create_new_dir_boole.disable()
+            self.constant_volume_boole.disable()
             # self.filename_string.disable()
             # self.directory.disable()
             # self.filename_extension.config(state="disable")
         else:
             self.save_images_boole.normal()
+            self.constant_volume_boole.normal()
             self.check_button_changed()
 
 
@@ -144,7 +147,7 @@ class UserInterface(tk.Toplevel):
         location_frame = tk.LabelFrame(self.root, text="Output data location", height=15, padx=30, pady=10)
         location_frame.config(background=BACKGROUND_COLOR)
         location_frame.grid(row=4, columnspan=3, rowspan=1, sticky="w", padx=15, pady=10)
-        
+
         self.directory = DirectoryEntryStyle(self.root, location_frame, "Location:", rw=0, entry_width=50)
 
         self.filename_string = TextEntryStyle(self, location_frame, "Filename:", rw=1, width_specify=20, stckyE="ew")
@@ -153,7 +156,7 @@ class UserInterface(tk.Toplevel):
         location_frame.columnconfigure(1,weight=1)
 
 
-        
+
 
     # def create_save_box(self):
     #     self.save_info_frame = tk.LabelFrame(self.root, text="Save images", height=15, padx=30, pady=10)
@@ -194,7 +197,7 @@ class UserInterface(tk.Toplevel):
             # self.directory.disable()
             # self.filename_extension.config(state="disable")
 
-        
+
 
     # def update_directory(self):
     #     directory = os.path.dirname(os.path.realpath(__file__))
@@ -235,7 +238,7 @@ class UserInterface(tk.Toplevel):
         # save_images_quit.grid(row=0, column=3, sticky="we")#padx=15, pady=10, sticky=W+E)
         save_images_quit.grid(row=0, column=1, sticky="we")#padx=15, pady=10, sticky=W+E)
         save_images_run.grid(row=0, column=3, sticky="we")#padx=15, pady=10, sticky=W+E)
-    
+
 
     def create_homepage_url(self):
         homepage_frame = tk.Frame(self.root)
@@ -260,7 +263,7 @@ class UserInterface(tk.Toplevel):
 
     def remove_underline_link(self, event):
         self.label_link.config(text="opencolloids.com", font=self.link_font, fg="blue")# underline = False)
-    
+
 
     def run(self, user_input_data):
         self.update_user_settings(user_input_data)
@@ -272,7 +275,7 @@ class UserInterface(tk.Toplevel):
         #     new_directory = os.path.join(user_input_data.directory_string, self.filename_string.get_value())
         #     os.makedirs(new_directory)
         #     user_input_data.directory_string = new_directory
-        
+
         # if user doesnt select files - abort
         if user_input_data.number_of_frames == 0:
             sys.exit()
@@ -302,7 +305,7 @@ class UserInterface(tk.Toplevel):
                 self.image_source.set_value(given_image_source) # set image source
             else:
                 self.directory.set_value("")
-            
+
             self.number_frames.set_value(data[7][1])
             self.wait_time.set_value(data[8][1])
             self.save_images_boole.set_value(data[9][1]) # do this after others
@@ -310,7 +313,7 @@ class UserInterface(tk.Toplevel):
 
             self.filename_string.set_value(data[11][1])
             # self.
-            
+
             given_dir = data[12][1]
             if os.path.isdir(given_dir):
                 self.directory.set_value(given_dir) # set given directory
@@ -476,7 +479,7 @@ class TextEntryStyle():
         self.text_variable = tk.StringVar()
         self.entry = tk.Entry(frame, highlightbackground=BACKGROUND_COLOR, textvariable=self.text_variable)
         self.entry.config(width=width_specify)
-        self.entry.grid(row=rw, column=1, sticky=stckyE)        
+        self.entry.grid(row=rw, column=1, sticky=stckyE)
 
     def get_value(self):
         # if self.text_variable.get() == '':
@@ -588,8 +591,8 @@ class CheckButtonStyle():
     def __init__(self, parent, frame, text_left, rw=0, cl=0, width_specify=10, pdx=0, pdy=2, stcky="w"): #, pd=5
         self._save_previous_variable = 0
         self.int_variable = tk.IntVar()
-        self.check_button = tk.Checkbutton(frame, text=text_left, background=BACKGROUND_COLOR, variable=self.int_variable)        
-        self.check_button.grid(row=rw, column=cl, sticky=stcky, pady=pdy, padx=pdx)#"CENTER") # sticky="w" padx=pd, 
+        self.check_button = tk.Checkbutton(frame, text=text_left, background=BACKGROUND_COLOR, variable=self.int_variable)
+        self.check_button.grid(row=rw, column=cl, sticky=stcky, pady=pdy, padx=pdx)#"CENTER") # sticky="w" padx=pd,
 
     def get_value(self):
         return self.int_variable.get()
@@ -653,12 +656,3 @@ class LabelFrameStyle():
 if __name__ == '__main__':
     UserInterface()
     # ui.app()
-
-
-
-
-
-
-
-
-
