@@ -16,7 +16,7 @@ from __future__ import print_function
 from modules.classes import ExperimentalSetup, ExperimentalDrop, DropData, Tolerances
 from modules.PlotManager import PlotManager
 from modules.ExtractData import ExtractedData
-import modules.syringe_pump
+from modules.syringe_pump import SyringePump
 
 from modules.user_interface import call_user_input
 from modules.read_image import get_image
@@ -85,13 +85,16 @@ def main():
     threshold = 0.01
     pump = None
 
-    if (n_frames > 1):
-        pump = syringe_pump.SyringePump("/dev/ttyUSB0")
+    if (n_frames > 1) and (user_inputs.constant_volume_boole):
+        pump = SyringePump("/dev/ttyUSB0")
         # Diameter is in mm. We want user input for this too at some point.
         pump.setDiameter(10)
         # Accumulator units are dependent on the diameter value given, so we'll
         # force it to be uL for now.
         pump.setAccumUnits("UL")
+        pump.clearVolumeAccum("both")
+
+        abs_total_volume_change = 0
 
     for i in range(n_frames):
         print("\nProcessing frame %d of %d..." % (i+1, n_frames))
@@ -112,10 +115,12 @@ def main():
         generate_full_data(extracted_data, raw_experiment, fitted_drop_data, user_inputs, i)
         data_vector = extracted_data.time_IFT_vol_area(i)
 
+
         # Volume is in micro litres
         if user_inputs.constant_volume_boole:
-            volume = data_vector.area[i]
-            print("Drop volume for frame {0} is {1:01.6f} uL.".format(i, volume))
+            # The 3rd element is the drop volume
+            volume = data_vector[2]
+            print("Drop volume for frame {0} is {1:01.6f} uL.".format(i+1, volume))
 
             if i == 0:
                 initial_volume = volume
@@ -123,9 +128,10 @@ def main():
             else:
                 current_volume = volume
 
-            volume_difference = initial_volume - current_volume
+            volume_difference = current_volume - initial_volume
+            abs_total_volume_change += abs(volume_difference)
 
-            if abs(volume_difference) > threshold:
+            if (abs(volume_difference) > threshold) and (i != (n_frames - 1)):
                 print("Difference between current drop volume and initial is {0} uL.".format(volume_difference))
 
                 # If the volume has increased
@@ -136,20 +142,33 @@ def main():
                 elif volume_difference < 0:
                     pump_direction = "infuse"
 
+                # We don't care about the sign anymore, so let's avoid more calls to abs
+                volume_difference = abs(volume_difference)
+
                 # We want the volume adjustment to take place in half the
                 # frame time so we have some leeway
-                rate = 60 * (abs(volume) / (int(user_inputs.wait_time) * 1.5))
+                rate = 60 * (volume_difference / ((int(user_inputs.wait_time) * 0.5)))
+                print("Rate to {0} {1} uL in 5 seconds is {2} uL/min.".format(pump_direction, volume_difference, rate))
                 # Rate is in micro litres per minute
-                units = "MM"
+                units = "UM"
 
                 # This makes the pump automatically stop after the desired
                 # volume has been dispensed
+
                 pump.setVolumeToDispense(volume_difference)
 
                 pump.setDirection(pump_direction)
                 pump.setRate(rate, units)
 
                 pump.run()
+                print("Absolute total volume difference: {0}".format(abs_total_volume_change))
+                print("Pumping...")
+
+                # This delays the plots but I think it's a good idea
+                time.sleep(user_inputs.wait_time/2)
+
+                print("Volume accumulator in nL (infuse, withdraw): {0}".format(pump.getVolumeAccum()))
+
 
         if user_inputs.interfacial_tension_boole:
             plots.append_data_plot(data_vector, i)

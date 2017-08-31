@@ -88,7 +88,7 @@ class SyringePump(serial.Serial):
         stop. Volume units are dependent on what was set with setAccumUnits, or
         whatever the default is. See setDiameter for default units.
         """
-        if isInstance(volume, int) or isInstance(volume, float):
+        if isinstance(volume, int) or isinstance(volume, float):
             valStr = float2PumpFormat(volume)
             self.sendCmd('VOL {0}'.format(valStr))
 
