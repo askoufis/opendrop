@@ -49,6 +49,7 @@ class ExperimentalSetup(object):
         self.filename = None
         self.time_string = None
         self.local_files = None
+        self.constant_volume_boole = None
 
 class ExperimentalDrop(object):
     def __init__(self):
@@ -95,7 +96,7 @@ class DropData(object):
         # self.number_experiments = None
         # self.wait_time = None
 
-    
+
     # interpolates the theoretical profile data
     def profile(self, s):
         if (s < 0):
@@ -133,7 +134,7 @@ class DropData(object):
     #     x_vec_initial = [.000001, 0., 0., 0., 0.]
     #     bond_number = self.bond()
     #     self.original_data = odeint(dataderiv, x_vec_initial, s_data_points, args=(bond_number,))[-1,-2:]
-    
+
     #     # interpolates the theoretical profile data
     # def profile(self):
     #     s_needle = self.determine
@@ -177,7 +178,7 @@ class DropData(object):
         self._max_s = float(value)
         self.generate_profile_data() # generate new profile when the maximum arc length is changed
 
-    # test validity of variable s_points + generate new profile when s_points are 
+    # test validity of variable s_points + generate new profile when s_points are
     @property
     def s_points(self):
         return self._s_points
@@ -204,7 +205,7 @@ class DropData(object):
     #     else:
     #         print('ERROR: drop profile not yet fitted')
     #         return None
-    
+
     # returns the Bond number
     def bond(self):
         return self.params[3]
@@ -227,8 +228,3 @@ class DropData(object):
     #     x_vec_initial = [.000001, 0., 0., 0., 0.]
     #     vol_sur = odeint(dataderiv, x_vec_initial, s_data_points, args=(bond_number,))[-1,-2:]
     #     return vol_sur
-
-
-
-
-

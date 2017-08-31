@@ -320,6 +320,8 @@ class UserInterface(tk.Toplevel):
                 # print(self.directory._directory_string.get_value())
             else:
                 self.directory.set_value(os.getcwd()) # current directory of Terminal
+            self.constant_volume_boole.set_value(data[13][1])
+
 
 
     def update_user_settings(self, user_input_data):
@@ -340,6 +342,7 @@ class UserInterface(tk.Toplevel):
             temp_filename = "Extracted_data"
         user_input_data.filename = temp_filename + IMAGE_EXTENSION
         user_input_data.directory_string = self.directory.get_value()
+        user_input_data.consant_volume_boole = self.constant_volume_boole.get_value()
 
 
 
@@ -358,7 +361,8 @@ class UserInterface(tk.Toplevel):
         ('Save images',self.save_images_boole.get_value()),
         ('Create new data folder',self.create_new_dir_boole.get_value()),
         ('Filename',self.filename_string.get_value()),
-        ('Directory',self.directory.get_value())
+        ('Directory',self.directory.get_value()),
+        ('Constant volume',self.constant_volume_boole.get_value())
         ])
         writer = csv.writer(open(PATH_TO_FILE, 'w'))
         for row in parameter_vector:
