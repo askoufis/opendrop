@@ -18,8 +18,6 @@ from opendrop.core.ift.SessileDrop import SessileDrop
 
 from opendrop.utility.comms import Pipe
 
-from serial import SerialException
-
 from six.moves import zip
 
 import cv2
