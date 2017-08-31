@@ -25,20 +25,10 @@ def generate_full_data(extracted_data, raw_experiment, fitted_drop_data, user_in
                                                  user_inputs,IFT_mN,vol_uL)
     extracted_data.parameters[i] = fitted_drop_data.previous_params
 
-
-
-
-
-
-
-
-
-
-
 def calculate_IFT(fitted_drop_data, user_inputs):
     Delta_rho = user_inputs.drop_density - user_inputs.continuous_density
-    # Bond = fitted_drop_data.bond()  
-    # print(fitted_drop_data.apex_radius())  
+    # Bond = fitted_drop_data.bond()
+    # print(fitted_drop_data.apex_radius())
     # print(pixels_to_meter(fitted_drop_data, user_inputs))
     bond_number = fitted_drop_data.previous_params[3]
     a_radius_m = fitted_drop_data.previous_params[2] * pixels_to_mm(fitted_drop_data, user_inputs) * 1.e-3
