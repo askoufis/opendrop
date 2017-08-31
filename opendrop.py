@@ -145,28 +145,24 @@ def main():
                 # We don't care about the sign anymore, so let's avoid more calls to abs
                 volume_difference = abs(volume_difference)
 
-                # We want the volume adjustment to take place in half the
-                # frame time so we have some leeway
-                rate = 60 * (volume_difference / ((int(user_inputs.wait_time) * 0.5)))
+                # Since volume adjustments are going to be pretty small, we can
+                # perform them in a few seconds without going over the max flow
+                # rate of the pump
+                rate = 60 * (volume_difference / ((int(user_inputs.wait_time) * 0.2)))
                 print("Rate to {0} {1} uL in 5 seconds is {2} uL/min.".format(pump_direction, volume_difference, rate))
                 # Rate is in micro litres per minute
                 units = "UM"
 
                 # This makes the pump automatically stop after the desired
                 # volume has been dispensed
-
                 pump.setVolumeToDispense(volume_difference)
-
                 pump.setDirection(pump_direction)
                 pump.setRate(rate, units)
 
                 pump.run()
+
                 print("Absolute total volume difference: {0}".format(abs_total_volume_change))
                 print("Pumping...")
-
-                # This delays the plots but I think it's a good idea
-                time.sleep(user_inputs.wait_time/2)
-
                 print("Volume accumulator in nL (infuse, withdraw): {0}".format(pump.getVolumeAccum()))
 
 
